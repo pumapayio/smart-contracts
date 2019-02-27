@@ -1,0 +1,9 @@
+/node_modules
+/build
+/coverage
+node*
+coverage.json
+unified
+/tmp*
+/test-*
+.idea/

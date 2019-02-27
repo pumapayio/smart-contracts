@@ -1,0 +1,11 @@
+{
+  "extends": "solhint:default",
+  "plugins": [],
+  "rules": {
+    "avoid-throw": false,
+    "avoid-suicide": "error",
+    "avoid-sha3": "warn",
+    "max-line-length": 140,
+    "separate-by-one-line-in-contract": false
+  }
+}
