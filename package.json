@@ -10,7 +10,7 @@
   "scripts": {
     "test": "scripts/test.sh",
     "coverage": "scripts/coverage.sh",
-    "unify": "echo '' > ./unify/unified.sol && ./node_modules/.bin/truffle-flattener ./contracts/PumaPayPullPayment.sol >> ./unify/unified.sol"
+    "unify": "echo '' > contracts/unified/unified.sol && sh scripts/unify.sh"
   },
   "license": "MIT",
   "dependencies": {
