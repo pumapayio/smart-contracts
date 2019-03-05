@@ -19,7 +19,7 @@ const calcSignedMessageForRegistration = async (pullPayment, privateKey) => {
   const messageHash = web3.utils.soliditySha3(
     {
       type: 'address',
-      value: pullPayment.facilitatorAddress
+      value: pullPayment.pullPaymentExecutorAddress
     }, {
       type: 'bytes32',
       value: pullPayment.paymentID
@@ -31,7 +31,7 @@ const calcSignedMessageForRegistration = async (pullPayment, privateKey) => {
       value: pullPayment.uniqueReferenceID
     }, {
       type: 'address',
-      value: pullPayment.receiverAddress
+      value: pullPayment.treasuryAddress
     }, {
       type: 'string',
       value: pullPayment.currency

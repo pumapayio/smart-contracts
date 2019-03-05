@@ -45,21 +45,21 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
   const clientOne = accounts[ 7 ];          // 0xb2F990cCC50Da372307b080501BfA4703c1C499B
   const clientTwo = accounts[ 8 ];          // 0x34bfe2E8cbec8d0263Cd24c67166022C2D350614
   const clientThree = accounts[ 9 ];        // 0xc4771Be5D994847bE5B846E7126A0F73c6A0B144
-  const receiverAddress = accounts[ 10 ];
+  const treasuryAddress = accounts[ 10 ];
 
   let singlePullPayment = {
     paymentID: web3API.utils.fromAscii('paymentID_1'),
     businessID: web3API.utils.fromAscii('businessID_1'),
     uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_1'),
     client: clientOne,
-    facilitatorAddress: facilitatorOne,
+    pullPaymentExecutorAddress: facilitatorOne,
     currency: 'EUR',
     initialPaymentAmountInCents: 0,
     fiatAmountInCents: 100000000, // 1 million in EUR cents
     frequency: 1,
     numberOfPayments: 1,
     startTimestamp: Math.floor(Date.now() / 1000) + DAY,
-    receiverAddress: receiverAddress
+    treasuryAddress: treasuryAddress
   };
 
   let recurringPullPayment = {
@@ -67,14 +67,14 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
     businessID: web3API.utils.fromAscii('businessID_2'),
     uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_2'),
     client: clientTwo,
-    facilitatorAddress: facilitatorTwo,
+    pullPaymentExecutorAddress: facilitatorTwo,
     currency: 'USD',
     initialPaymentAmountInCents: 0,
     fiatAmountInCents: 200, // 2.00 USD in cents
     frequency: 2 * DAY,
     numberOfPayments: 10,
     startTimestamp: Math.floor(Date.now() / 1000) + DAY,
-    receiverAddress: receiverAddress
+    treasuryAddress: treasuryAddress
   };
 
   let recurringPullPaymentWithInitialAmount = {
@@ -82,14 +82,14 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
     businessID: web3API.utils.fromAscii('businessID_3'),
     uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_3'),
     client: clientThree,
-    facilitatorAddress: facilitatorThree,
+    pullPaymentExecutorAddress: facilitatorThree,
     currency: 'USD',
     initialPaymentAmountInCents: 100,
     fiatAmountInCents: 200, // 2.00 USD in cents
     frequency: 2 * DAY,
     numberOfPayments: 10,
     startTimestamp: Math.floor(Date.now() / 1000) + 2 * DAY,
-    receiverAddress: receiverAddress
+    treasuryAddress: treasuryAddress
   };
 
   let token;
@@ -324,7 +324,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID ],
-        [ singlePullPayment.client, singlePullPayment.facilitatorAddress, singlePullPayment.receiverAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         singlePullPayment.currency,
         singlePullPayment.initialPaymentAmountInCents,
         singlePullPayment.fiatAmountInCents,
@@ -355,7 +355,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         .equal(String(web3API.utils.toBN(singlePullPayment.startTimestamp))); // NEXT PAYMENT TIMESTAMP = START TIMESTAMP
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3API.utils.toBN(0))); // LAST PAYMENT TIMESTAMP
       String(activePaymentInArray[ 11 ]).should.be.equal(String(web3API.utils.toBN(0))); // CANCEL PAYMENT TIMESTAMP
-      activePaymentInArray[ 12 ].should.be.equal(receiverAddress); // TREASURY ADDRESS
+      activePaymentInArray[ 12 ].should.be.equal(treasuryAddress); // TREASURY ADDRESS
     });
 
     it('should revert when NOT executed an executor', async () => {
@@ -367,7 +367,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID ],
-        [ singlePullPayment.client, singlePullPayment.facilitatorAddress, singlePullPayment.receiverAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         singlePullPayment.currency,
         singlePullPayment.initialPaymentAmountInCents,
         singlePullPayment.fiatAmountInCents,
@@ -388,7 +388,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID ],
-        [ recurringPullPayment.client, recurringPullPayment.facilitatorAddress, recurringPullPayment.receiverAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         recurringPullPayment.currency,
         recurringPullPayment.initialPaymentAmountInCents,
         recurringPullPayment.fiatAmountInCents,
@@ -410,7 +410,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID ],
-        [ singlePullPayment.client, singlePullPayment.facilitatorAddress, singlePullPayment.receiverAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         singlePullPayment.currency,
         singlePullPayment.initialPaymentAmountInCents,
         singlePullPayment.fiatAmountInCents,
@@ -426,7 +426,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
       assert.equal(logs.length, 1);
       assert.equal(logs[ 0 ].event, 'LogPaymentRegistered');
       logs[ 0 ].args.clientAddress.should.be.equal(singlePullPayment.client);
-      logs[ 0 ].args.facilitatorAddress.should.be.equal(singlePullPayment.facilitatorAddress);
+      logs[ 0 ].args.pullPaymentExecutorAddress.should.be.equal(singlePullPayment.pullPaymentExecutorAddress);
       logs[ 0 ].args.paymentID.should.be.equal(singlePullPayment.paymentID);
       logs[ 0 ].args.businessID.should.be.equal(singlePullPayment.businessID);
       logs[ 0 ].args.uniqueReferenceID.should.be.equal(singlePullPayment.uniqueReferenceID);
@@ -454,7 +454,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID ],
-        [ singlePullPayment.client, singlePullPayment.facilitatorAddress, singlePullPayment.receiverAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         singlePullPayment.currency,
         singlePullPayment.initialPaymentAmountInCents,
         singlePullPayment.fiatAmountInCents,
@@ -475,7 +475,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID ],
-        [ recurringPullPayment.client, recurringPullPayment.facilitatorAddress, singlePullPayment.receiverAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         recurringPullPayment.currency,
         recurringPullPayment.initialPaymentAmountInCents,
         recurringPullPayment.fiatAmountInCents,
@@ -488,7 +488,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
     });
 
     it('should set the cancel date of the pull payment for the facilitatorOne to NOW', async () => {
-      const signature = await calcSignedMessageForDeletion(singlePullPayment.paymentID, singlePullPayment.facilitatorAddress, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletion(singlePullPayment.paymentID, singlePullPayment.pullPaymentExecutorAddress, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.deletePullPayment(
@@ -497,7 +497,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.s,
         singlePullPayment.paymentID,
         singlePullPayment.client,
-        singlePullPayment.facilitatorAddress, {
+        singlePullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         });
       const ethDate = await currentBlockTime();
@@ -570,7 +570,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
       assert.equal(logs.length, 1);
       assert.equal(logs[ 0 ].event, 'LogPaymentCancelled');
       logs[ 0 ].args.clientAddress.should.be.equal(singlePullPayment.client);
-      logs[ 0 ].args.facilitatorAddress.should.be.equal(singlePullPayment.facilitatorAddress);
+      logs[ 0 ].args.pullPaymentExecutorAddress.should.be.equal(singlePullPayment.pullPaymentExecutorAddress);
       logs[ 0 ].args.paymentID.should.be.equal(singlePullPayment.paymentID);
       logs[ 0 ].args.businessID.should.be.equal(singlePullPayment.businessID);
       logs[ 0 ].args.uniqueReferenceID.should.be.equal(singlePullPayment.uniqueReferenceID);
@@ -607,7 +607,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID ],
-        [ singlePullPayment.client, singlePullPayment.facilitatorAddress, receiverAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, treasuryAddress ],
         singlePullPayment.currency,
         singlePullPayment.initialPaymentAmountInCents,
         singlePullPayment.fiatAmountInCents,
@@ -621,11 +621,11 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
     it('should pull the amount specified on the payment details to the facilitatorOne', async () => {
       await timeTravel(DAY + 1);
-      await pumaPayPullPayment.executePullPayment(singlePullPayment.client, singlePullPayment.facilitatorAddress, singlePullPayment.paymentID, {
+      await pumaPayPullPayment.executePullPayment(singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.paymentID, {
         from: facilitatorOne
       });
 
-      const balanceOfTreasuryAfter = await token.balanceOf(receiverAddress);
+      const balanceOfTreasuryAfter = await token.balanceOf(treasuryAddress);
       // 1 PMA = 0.01 EUR ==> 1 EUR = 100 PMA ==> 1000000 EUR = 100000000 PMA
       Number(balanceOfTreasuryAfter).should.be.equal(100000000 * ONE_ETHER);
     });
@@ -699,7 +699,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
       assert.equal(logs.length, 1);
       assert.equal(logs[ 0 ].event, 'LogPullPaymentExecuted');
       logs[ 0 ].args.clientAddress.should.be.equal(singlePullPayment.client);
-      logs[ 0 ].args.facilitatorAddress.should.be.equal(singlePullPayment.facilitatorAddress);
+      logs[ 0 ].args.pullPaymentExecutorAddress.should.be.equal(singlePullPayment.pullPaymentExecutorAddress);
       logs[ 0 ].args.paymentID.should.be.equal(singlePullPayment.paymentID);
       logs[ 0 ].args.businessID.should.be.equal(singlePullPayment.businessID);
       logs[ 0 ].args.uniqueReferenceID.should.be.equal(singlePullPayment.uniqueReferenceID);
@@ -736,7 +736,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID ],
-        [ recurringPullPayment.client, recurringPullPayment.facilitatorAddress, recurringPullPayment.receiverAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         recurringPullPayment.currency,
         recurringPullPayment.initialPaymentAmountInCents,
         recurringPullPayment.fiatAmountInCents,
@@ -753,7 +753,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         from: facilitatorTwo
       });
 
-      const beneficiaryBalance = await token.balanceOf(receiverAddress);
+      const beneficiaryBalance = await token.balanceOf(treasuryAddress);
       // 1 PMA = 0.02 USD ==> 1 USD = 50 PMA ==> 2 USD = 100 PMA
       Number(beneficiaryBalance).should.be.equal(100 * ONE_ETHER);
     });
@@ -799,7 +799,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         from: facilitatorTwo
       });
 
-      const beneficiaryBalance = await token.balanceOf(receiverAddress);
+      const beneficiaryBalance = await token.balanceOf(treasuryAddress);
       // 1 PMA = 0.02 USD ==> 1 USD = 50 PMA ==> 2 USD = 100 PMA
       Number(beneficiaryBalance).should.be.equal(200 * ONE_ETHER);
     });
@@ -834,7 +834,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         from: facilitatorTwo
       });
 
-      const beneficiaryBalance = await token.balanceOf(receiverAddress);
+      const beneficiaryBalance = await token.balanceOf(treasuryAddress);
       // 1 PMA = 0.02 USD ==> 1 USD = 50 PMA ==> 2 USD = 100 PMA
       Number(beneficiaryBalance).should.be.equal(500 * ONE_ETHER);
       await assertRevert(pumaPayPullPayment.executePullPayment(clientTwo, facilitatorTwo, recurringPullPayment.paymentID, {
@@ -866,7 +866,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         from: facilitatorTwo
       });
 
-      const beneficiaryBalance = await token.balanceOf(receiverAddress);
+      const beneficiaryBalance = await token.balanceOf(treasuryAddress);
       // 1 PMA = 0.02 USD ==> 1 USD = 50 PMA ==> 2 USD = 100 PMA
       Number(beneficiaryBalance).should.be.equal(300 * ONE_ETHER);
       await assertRevert(pumaPayPullPayment.executePullPayment(clientTwo, facilitatorTwo, recurringPullPayment.paymentID, {
@@ -907,8 +907,8 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
           recurringPullPaymentWithInitialAmount.businessID,
           recurringPullPaymentWithInitialAmount.uniqueReferenceID ],
         [ recurringPullPaymentWithInitialAmount.client,
-          recurringPullPaymentWithInitialAmount.facilitatorAddress,
-          recurringPullPaymentWithInitialAmount.receiverAddress ],
+          recurringPullPaymentWithInitialAmount.pullPaymentExecutorAddress,
+          recurringPullPaymentWithInitialAmount.treasuryAddress ],
         recurringPullPaymentWithInitialAmount.currency,
         recurringPullPaymentWithInitialAmount.initialPaymentAmountInCents,
         recurringPullPaymentWithInitialAmount.fiatAmountInCents,
@@ -925,7 +925,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         from: facilitatorThree
       });
 
-      const beneficiaryBalance = await token.balanceOf(receiverAddress);
+      const beneficiaryBalance = await token.balanceOf(treasuryAddress);
 
       Number(beneficiaryBalance).should.be.equal(50 * ONE_ETHER);
     });
@@ -939,7 +939,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         from: facilitatorThree
       });
 
-      const beneficiaryBalance = await token.balanceOf(receiverAddress);
+      const beneficiaryBalance = await token.balanceOf(treasuryAddress);
 
       Number(beneficiaryBalance).should.be.equal(150 * ONE_ETHER);
     });
@@ -957,7 +957,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         from: facilitatorThree
       });
 
-      const beneficiaryBalance = await token.balanceOf(receiverAddress);
+      const beneficiaryBalance = await token.balanceOf(treasuryAddress);
 
       Number(beneficiaryBalance).should.be.equal(250 * ONE_ETHER);
     });
@@ -987,7 +987,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
   const clientOne = accounts[ 7 ];          // 0xb2F990cCC50Da372307b080501BfA4703c1C499B
   const clientTwo = accounts[ 8 ];          // 0x34bfe2E8cbec8d0263Cd24c67166022C2D350614
   const clientThree = accounts[ 9 ];        // 0xc4771Be5D994847bE5B846E7126A0F73c6A0B144
-  const receiverAddress = accounts[ 10 ];
+  const treasuryAddress = accounts[ 10 ];
 
   const gasPrice = 1000000000;
 
@@ -996,14 +996,14 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
     businessID: web3API.utils.fromAscii('businessID_1'),
     uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_1'),
     client: clientOne,
-    facilitatorAddress: facilitatorOne,
+    pullPaymentExecutorAddress: facilitatorOne,
     currency: 'EUR',
     initialPaymentAmountInCents: 0,
     fiatAmountInCents: 100000000, // 1 million in EUR cents
     frequency: 1,
     numberOfPayments: 1,
     startTimestamp: Math.floor(Date.now() / 1000) + DAY,
-    receiverAddress: receiverAddress
+    treasuryAddress: treasuryAddress
   };
 
   let token;
@@ -1173,7 +1173,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID ],
-        [ singlePullPayment.client, singlePullPayment.facilitatorAddress, singlePullPayment.receiverAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         singlePullPayment.currency,
         singlePullPayment.initialPaymentAmountInCents,
         singlePullPayment.fiatAmountInCents,
@@ -1208,7 +1208,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         .equal(String(web3API.utils.toBN(singlePullPayment.startTimestamp))); // NEXT PAYMENT TIMESTAMP = START TIMESTAMP
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3API.utils.toBN(0))); // LAST PAYMENT TIMESTAMP
       String(activePaymentInArray[ 11 ]).should.be.equal(String(web3API.utils.toBN(0))); // CANCEL PAYMENT TIMESTAMP
-      activePaymentInArray[ 12 ].should.be.equal(receiverAddress); // TREASURY ADDRESS
+      activePaymentInArray[ 12 ].should.be.equal(treasuryAddress); // TREASURY ADDRESS
     });
   });
 
@@ -1230,7 +1230,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID ],
-        [ singlePullPayment.client, singlePullPayment.facilitatorAddress, singlePullPayment.receiverAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         singlePullPayment.currency,
         singlePullPayment.initialPaymentAmountInCents,
         singlePullPayment.fiatAmountInCents,
@@ -1250,7 +1250,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         value: executorBalance - 0.01 * ONE_ETHER
       });
       const executorBalanceBefore = await web3API.eth.getBalance(executorOne);
-      const signature = await calcSignedMessageForDeletion(singlePullPayment.paymentID, singlePullPayment.facilitatorAddress, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletion(singlePullPayment.paymentID, singlePullPayment.pullPaymentExecutorAddress, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const transaction = await pumaPayPullPayment.deletePullPayment(
@@ -1259,7 +1259,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         sigVRS.s,
         singlePullPayment.paymentID,
         singlePullPayment.client,
-        singlePullPayment.facilitatorAddress, {
+        singlePullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         });
 

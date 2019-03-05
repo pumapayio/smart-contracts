@@ -21,21 +21,21 @@ contract PumaPayPullPayment is PayableOwnable {
 
     event LogPaymentRegistered(
         address clientAddress,
-        address facilitatorAddress,
+        address pullPaymentExecutorAddress,
         bytes32 paymentID,
         bytes32 businessID,
         bytes32 uniqueReferenceID
     );
     event LogPaymentCancelled(
         address clientAddress,
-        address facilitatorAddress,
+        address pullPaymentExecutorAddress,
         bytes32 paymentID,
         bytes32 businessID,
         bytes32 uniqueReferenceID
     );
     event LogPullPaymentExecuted(
         address clientAddress,
-        address facilitatorAddress,
+        address pullPaymentExecutorAddress,
         bytes32 paymentID,
         bytes32 businessID,
         bytes32 uniqueReferenceID
@@ -76,7 +76,7 @@ contract PumaPayPullPayment is PayableOwnable {
         uint256 nextPaymentTimestamp;           /// timestamp of next payment
         uint256 lastPaymentTimestamp;           /// timestamp of last payment
         uint256 cancelTimestamp;                /// timestamp the payment was cancelled
-        address receiverAddress;                /// address which pma tokens will be transfer to on execution
+        address treasuryAddress;                /// address which pma tokens will be transfer to on execution
     }
 
     /// ===============================================================================================================
@@ -286,7 +286,7 @@ contract PumaPayPullPayment is PayableOwnable {
         pullPayments[_addresses[0]][_addresses[1]].paymentID = _ids[0];
         pullPayments[_addresses[0]][_addresses[1]].businessID = _ids[1];
         pullPayments[_addresses[0]][_addresses[1]].uniqueReferenceID = _ids[2];
-        pullPayments[_addresses[0]][_addresses[1]].receiverAddress = _addresses[2];
+        pullPayments[_addresses[0]][_addresses[1]].treasuryAddress = _addresses[2];
 
         require(isValidRegistration(
             v,
@@ -399,7 +399,7 @@ contract PumaPayPullPayment is PayableOwnable {
         pullPayments[_client][_facilitator].lastPaymentTimestamp = now;
         token.transferFrom(
             _client,
-            pullPayments[_client][_facilitator].receiverAddress,
+            pullPayments[_client][_facilitator].treasuryAddress,
             amountInPMA
         );
 
@@ -470,7 +470,7 @@ contract PumaPayPullPayment is PayableOwnable {
                     _pullPayment.paymentID,
                     _pullPayment.businessID,
                     _pullPayment.uniqueReferenceID,
-                    _pullPayment.receiverAddress,
+                    _pullPayment.treasuryAddress,
                     _pullPayment.currency,
                     _pullPayment.initialPaymentAmountInCents,
                     _pullPayment.fiatAmountInCents,
