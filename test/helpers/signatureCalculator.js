@@ -2,7 +2,6 @@ const EthCrypto = require('eth-crypto');
 const Web3 = require('web3');
 const web3 = new Web3('http://localhost:7545');
 
-
 // This process happens on wallet side
 const calcSignedMessage = async (message, privateKey) => {
   // create message keccak256 hash
