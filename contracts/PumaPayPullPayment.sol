@@ -1,8 +1,9 @@
-pragma solidity 0.5.0;
+pragma solidity 0.5.8;
 
 import "./ownership/PayableOwnable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 
 /// @title PumaPay Pull Payment - Contract that facilitates our pull payment protocol
 /// @author PumaPay Dev Team - <developers@pumapay.io>
@@ -54,7 +55,7 @@ contract PumaPayPullPayment is PayableOwnable {
     ///                                      Members
     /// ===============================================================================================================
 
-    ERC20 public token;
+    IERC20 public token;
 
     mapping(string => uint256) private conversionRates;
     mapping(address => bool) public executors;
@@ -157,7 +158,7 @@ contract PumaPayPullPayment is PayableOwnable {
     constructor (address _token)
     public {
         require(_token != address(0), "Invalid address for token - ZERO_ADDRESS provided");
-        token = ERC20(_token);
+        token = IERC20(_token);
     }
 
     // @notice Will receive any eth sent to the contract

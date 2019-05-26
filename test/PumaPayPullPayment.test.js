@@ -6,12 +6,12 @@ const {
   calcSignedMessageForDeletion,
   getVRS
 } = require('./helpers/signatureCalculator');
-const PumaPayToken = artifacts.require('PumaPayToken');
+const PumaPayToken = artifacts.require('ERC20Mintable');
 
 const PumaPayPullPayment = artifacts.require('PumaPayPullPayment');
 const BigNumber = web3.BigNumber;
 const Web3 = require('web3');
-const web3API = new Web3(new Web3.providers.HttpProvider('http://localhost:7545'));
+const web3API = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 
 require('chai')
   .use(require('chai-as-promised'))
@@ -30,9 +30,9 @@ const MINTED_TOKENS = web3.utils.toWei('1000000000', 'ether'); // 1 Billion PMA
 const EUR_EXCHANGE_RATE = 100000000; // 0.01 * 1^10
 const USD_EXCHANGE_RATE = 200000000; // 0.02 * 1^10
 
-const CLIENT_ONE_PRIVATE_KEY = '0x581a2b62e840bae3e56685c5ede97d0cb1f252fa7937026dcac489074b01fc29';
-const CLIENT_TWO_PRIVATE_KEY = '0xc5459c6743cd4fe5a89c3fc994c2bdfd5dbac6ecd750f642bd2e272d9fa0852d';
-const CLIENT_THREE_PRIVATE_KEY = '0x7f201ee20596c003b979ba39018b08cd7920abbc04a9d1bb984aa8be421db541';
+const CLIENT_ONE_PRIVATE_KEY = '0xfd636488e4a07b63b02cf882b2f8fc85019360b281b24a9682bb9fad1c994ff7';
+const CLIENT_TWO_PRIVATE_KEY = '0x4a2cfeead3e529d4b61cdd5a36eeccfe4900751642e897efd9748666d2f59887';
+const CLIENT_THREE_PRIVATE_KEY = '0x12cd8cd1f5cde8cb8715e8155d4b336b829a74d68797323556b87a6b3b5bec59';
 
 contract('PumaPay Pull Payment Contract', async (accounts) => {
   const deployerAccount = accounts[ 0 ];
@@ -48,9 +48,9 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
   const treasuryAddress = accounts[ 10 ];
 
   let singlePullPayment = {
-    paymentID: web3API.utils.fromAscii('paymentID_1'),
-    businessID: web3API.utils.fromAscii('businessID_1'),
-    uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_1'),
+    paymentID: web3API.utils.padRight(web3API.utils.fromAscii('paymentID_1'), 64),
+    businessID: web3API.utils.padRight(web3API.utils.fromAscii('businessID_1'), 64),
+    uniqueReferenceID: web3API.utils.padRight(web3API.utils.fromAscii('uniqueReferenceID_1'), 64),
     client: clientOne,
     pullPaymentExecutorAddress: paymentExecutorOne,
     currency: 'EUR',
@@ -63,9 +63,9 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
   };
 
   let recurringPullPayment = {
-    paymentID: web3API.utils.fromAscii('paymentID_2'),
-    businessID: web3API.utils.fromAscii('businessID_2'),
-    uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_2'),
+    paymentID: web3API.utils.padRight(web3API.utils.fromAscii('paymentID_2'), 64),
+    businessID: web3API.utils.padRight(web3API.utils.fromAscii('businessID_2'), 64),
+    uniqueReferenceID: web3API.utils.padRight(web3API.utils.fromAscii('uniqueReferenceID_2'), 64),
     client: clientTwo,
     pullPaymentExecutorAddress: paymentExecutorTwo,
     currency: 'USD',
@@ -78,9 +78,9 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
   };
 
   let recurringPullPaymentWithInitialAmount = {
-    paymentID: web3API.utils.fromAscii('paymentID_3'),
-    businessID: web3API.utils.fromAscii('businessID_3'),
-    uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_3'),
+    paymentID: web3API.utils.padRight(web3API.utils.fromAscii('paymentID_3'), 64),
+    businessID: web3API.utils.padRight(web3API.utils.fromAscii('businessID_3'), 64),
+    uniqueReferenceID: web3API.utils.padRight(web3API.utils.fromAscii('uniqueReferenceID_3'), 64),
     client: clientThree,
     pullPaymentExecutorAddress: paymentExecutorThree,
     currency: 'USD',
@@ -983,21 +983,21 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 });
 
 contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
-  const deployerAccount = accounts[ 0 ];    // 0xe689c075c808404C9A0d84bE10d2E960CC61c497
-  const owner = accounts[ 1 ];              // 0x853C292e80e2ba1f93F33Af6046C3A0B2EaE47Dc
-  const executorOne = accounts[ 2 ];        // 0xf52DBA6fe86D2f80c13F2e2565F521Ad0C18Efc0
-  const facilitatorOne = accounts[ 4 ];     // 0x3D76b36e4F76D7220001F21Cf0C70F2fb5799e6b
-  const clientOne = accounts[ 7 ];          // 0xb2F990cCC50Da372307b080501BfA4703c1C499B
-  const clientTwo = accounts[ 8 ];          // 0x34bfe2E8cbec8d0263Cd24c67166022C2D350614
-  const clientThree = accounts[ 9 ];        // 0xc4771Be5D994847bE5B846E7126A0F73c6A0B144
+  const deployerAccount = accounts[ 0 ];
+  const owner = accounts[ 1 ];
+  const executorOne = accounts[ 2 ];
+  const facilitatorOne = accounts[ 4 ];
+  const clientOne = accounts[ 7 ];
+  const clientTwo = accounts[ 8 ];
+  const clientThree = accounts[ 9 ];
   const treasuryAddress = accounts[ 10 ];
 
   const gasPrice = 1000000000;
 
   let singlePullPayment = {
-    paymentID: web3API.utils.fromAscii('paymentID_1'),
-    businessID: web3API.utils.fromAscii('businessID_1'),
-    uniqueReferenceID: web3API.utils.fromAscii('uniqueReferenceID_1'),
+    paymentID: web3API.utils.padRight(web3API.utils.fromAscii('paymentID_1'), 64),
+    businessID: web3API.utils.padRight(web3API.utils.fromAscii('businessID_1'), 64),
+    uniqueReferenceID: web3API.utils.padRight(web3API.utils.fromAscii('uniqueReferenceID_1'), 64),
     client: clientOne,
     pullPaymentExecutorAddress: facilitatorOne,
     currency: 'EUR',
@@ -1011,7 +1011,6 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
 
   let token;
   let pumaPayPullPayment;
-
 
   beforeEach('Deploying new PumaPayToken', async () => {
     token = await PumaPayToken.new({
@@ -1061,22 +1060,24 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
     });
     it('should transfer ETH to the owner when its balance is lower than 0.01 ETH and set the rate', async () => {
       const ownerBalance = await web3API.eth.getBalance(owner);
+
       await web3API.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: ownerBalance - 0.15 * ONE_ETHER
+        value: String(ownerBalance - ( 0.15 * ONE_ETHER ))
       });
+
       const ownerBalanceBefore = await web3API.eth.getBalance(owner);
       const transaction = await pumaPayPullPayment.setRate('EUR', EUR_EXCHANGE_RATE, {
         from: owner
       });
       const txFee = Number(transaction.receipt.gasUsed) * gasPrice;
-
       const ownerBalanceAfter = await web3API.eth.getBalance(owner);
       const euroRate = await pumaPayPullPayment.getRate('EUR');
 
       String(euroRate).should.be.equal(String(web3API.utils.toBN(EUR_EXCHANGE_RATE)));
       String(ownerBalanceAfter - ownerBalanceBefore + txFee).should.be.equal(String(web3API.utils.toBN(ONE_ETHER)));
+
     });
   });
 
@@ -1123,12 +1124,14 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       });
     });
     afterEach('Transfer ETH to owner account', async () => {
-      await web3API.eth.sendTransaction({
+      web3API.eth.sendTransaction({
         from: deployerAccount,
         to: owner,
         value: 5 * ONE_ETHER
+      }, () => {
       });
     });
+
     it('should transfer ETH to the owner when its balance is lower than 0.01 ETH', async () => {
       const ownerBalance = await web3API.eth.getBalance(owner);
       await web3API.eth.sendTransaction({
@@ -1136,6 +1139,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         to: deployerAccount,
         value: ownerBalance - 0.01 * ONE_ETHER
       });
+
       const ownerBalanceBefore = await web3API.eth.getBalance(owner);
       const transaction = await pumaPayPullPayment.removeExecutor(executorOne, {
         from: owner
@@ -1166,6 +1170,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         to: deployerAccount,
         value: executorBalance - 0.01 * ONE_ETHER
       });
+
       const executorBalanceBefore = await web3API.eth.getBalance(executorOne);
 
       const signature = await calcSignedMessageForRegistration(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
@@ -1252,6 +1257,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         to: deployerAccount,
         value: executorBalance - 0.01 * ONE_ETHER
       });
+
       const executorBalanceBefore = await web3API.eth.getBalance(executorOne);
       const signature = await calcSignedMessageForDeletion(singlePullPayment.paymentID, singlePullPayment.pullPaymentExecutorAddress, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
