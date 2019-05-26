@@ -6,45 +6,33 @@ set -o errexit
 # Executes cleanup function at script exit.
 trap cleanup EXIT
 
+SOLIDITY_COVERAGE=$1
+
 cleanup() {
   # Kill the ganache instance that we started (if we started one and if it's still running).
-  if [ -n "$ganache-cli" ] && ps -p $ganache-cli > /dev/null; then
-    kill -9 $ganache-cli
+  if [ -n "$ganache_pid" ] && ps -p $ganache_pid > /dev/null; then
+    kill -9 $ganache_pid
   fi
 }
 
-if [ "$SOLIDITY_COVERAGE" = true ]; then
-  ganache_port=8555
-else
-  ganache_port=7545
-fi
+ganache_port=8545
 
 ganache_running() {
   nc -z localhost "$ganache_port"
 }
 
 start_ganache() {
-  # We define 10 accounts with balance 1M ether, needed for high-value tests.
-  local accounts=(
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501200,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501201,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501202,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501203,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501204,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501205,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501206,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501207,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501208,1000000000000000000000000"
-    --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501209,1000000000000000000000000"
-  )
+  local mnemonic="sport pattern badge pretty abandon venture stone cupboard plunge rm bulk essence"
+  local balance=100
+  local gasPrice=1000000000
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port "$ganache_port" "${accounts[@]}" > /dev/null &
+    node_modules/.bin/testrpc-sc --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -a 20 > /dev/null &
   else
-    node_modules/.bin/ganache-cli --gasLimit 0xfffffffffff "${accounts[@]}" > /dev/null &
+    node_modules/.bin/ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -a 20 > /dev/null &
   fi
 
-  ganache-cli=$!
+  ganache_pid=$!
 }
 
 if ganache_running; then
@@ -61,5 +49,5 @@ if [ "$SOLIDITY_COVERAGE" = true ]; then
     cat coverage/lcov.info | node_modules/.bin/coveralls
   fi
 else
-  node_modules/.bin/truffle test "$@"
+  node_modules/.bin/truffle test "$@" --network ganache
 fi
