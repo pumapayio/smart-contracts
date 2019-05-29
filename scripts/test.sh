@@ -22,8 +22,8 @@ ganache_running() {
 }
 
 start_ganache() {
-  local mnemonic="sport pattern badge pretty abandon venture stone cupboard plunge rm bulk essence"
-  local balance=100
+  local mnemonic="sport pattern badge pretty abandon venture stone cupboard plunge firm bulk essence"
+  local balance=10000
   local gasPrice=1000000000
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then

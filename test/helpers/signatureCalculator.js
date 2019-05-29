@@ -58,6 +58,53 @@ const calcSignedMessageForRegistration = async (pullPayment, privateKey) => {
   return signedMessage;
 };
 
+const calcSignedMessageForRegistrationV2 = async (pullPayment, privateKey) => {
+  const messageHash = web3.utils.soliditySha3(
+    {
+      type: 'address',
+      value: pullPayment.pullPaymentExecutorAddress
+    }, {
+      type: 'bytes32',
+      value: pullPayment.paymentID
+    }, {
+      type: 'bytes32',
+      value: pullPayment.paymentType
+    }, {
+      type: 'address',
+      value: pullPayment.treasuryAddress
+    }, {
+      type: 'string',
+      value: pullPayment.currency
+    }, {
+      type: 'uint256',
+      value: pullPayment.initialConversionRate
+    }, {
+      type: 'uint256',
+      value: pullPayment.initialPaymentAmountInCents
+    }, {
+      type: 'uint256',
+      value: pullPayment.fiatAmountInCents
+    }, {
+      type: 'uint256',
+      value: pullPayment.frequency
+    }, {
+      type: 'uint256',
+      value: pullPayment.numberOfPayments
+    }, {
+      type: 'uint256',
+      value: pullPayment.startTimestamp
+    }, {
+      type: 'uint256',
+      value: pullPayment.trialPeriod
+    });
+
+  const signedMessage = EthCrypto.sign(
+    privateKey, messageHash
+  );
+
+  return signedMessage;
+};
+
 const calcSignedMessageForDeletion = async (paymentID, beneficiary, privateKey) => {
   const messageHash = web3.utils.soliditySha3({
     type: 'bytes32',
@@ -90,6 +137,7 @@ const getVRS = async (singature) => {
 
 module.exports = {
   calcSignedMessageForRegistration,
+  calcSignedMessageForRegistrationV2,
   calcSignedMessageForDeletion,
   getVRS
 };
