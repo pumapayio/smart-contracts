@@ -1,22 +1,14 @@
 
-# PumaPay Pull Payment Smart Contracts
-## PumaPay Token
-The [PumaPay token](./contracts/PumaPayToken.sol) is based on the [ERC-20 Token standard](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md) developed in Solidity and deployed on the Ethereum network on our TGE which occured on May 7th 2018.
-
-#### Usage
-The address from which the contract is deployed will be set as the owner address. Only the owner can call the methods `mint()` and `finishMinting()`.  
-Minting is cumulative. Calling this method twice for the same address (with minting value greater than zero) will result in an increase of that address balance.  
-The tokens are not transferable until the owner invokes `finishMinting()`.  
-Once `finishMinting()` was invoked, it can't be reversed, i.e. no new tokens can be minted.  
-ETH Address: [0x846c66cf71c43f80403b51fe3906b3599d63336f](https://etherscan.io/token/0x846c66cf71c43f80403b51fe3906b3599d63336f)  
-Total Amount of Tokens: 78,042,956,829 PMA
+# PumaPay Pull Payment Smart Contracts V2
+## V1 Smart Contracts 
+You can find the first version of the smart contracts (here)[https://github.com/pumapayio/pumapay-token].
 
 ## PumaPay Pull Payment Protocol
 The PumaPay Pull Payment Protocol supports an advanced "pull" mechanism, which allows users to not only push tokens from one wallet to another but to also pull funds from other wallets after prior authorization has been given.
 Our Pull Payment Protocol currently supports a variaty of payments models such as:
 * Single Pull Payment
-* Recurring Pull Payment (Fixed amount)
-* Recurring Pull Payment with initial payment
+* Recurring Pull Payment (Fixed amount / Fixed period)
+* Recurring Pull Payment with initial payment 
 * Recurring Pull Payment with trial period (free trial)
 * Recurring Pull Payment with initial payment and trial period (paid trial)  
 The first version of our protocol has a semi-decentralized approach in order to reduced the gas fees that are involved with setting the PMA/Fiat rates on the blockchain and eliminate the customer costs for registering and cancelling pull payments, which are currently taken care of by PumaPay through the smart contract.  
@@ -26,7 +18,7 @@ The smart contract will be monitored and once its balance drops below 2 ETH it w
 ##### Contract constructor
 Sets the token address that the contract facilitates.
 ```solidity
-constructor (PumaPayToken _token)
+constructor (IERC20 _token)
 ```
 ##### Payable
 Allows the `PumaPayPullPayment` contract to receive ETH to facilitate the funding of owner/executors.
@@ -35,17 +27,17 @@ function () external payable
 ```
 #### Members
 ##### Owner
-Our `PumaPayPullPayment` contract is `ownable`. 
+Our `PumaPayPullPayment` contract is `PayableOwnable`. 
 ```solidity
-contract PumaPayPullPayment is Ownable
+contract PumaPayPullPayment is PayableOwnable
 ```
+*Note: PayableOwnable is an extension of the Ownable smart contract where the owner is also a payable address allowing the owner to receive ETH from the smart contract.* 
 The owner (only one) of the smart contract is responsible for:
-1. Setting the PMA/Fiat rates `function setRate(string _currency, uint256 _rate)`
-2. Add executors `function addExecutor(address _executor)`
-3. Remove executor `function removeExecutor(address _executor)`  
+1. Add executors `function addExecutor(address _executor)`
+2. Remove executor `function removeExecutor(address _executor)`  
 On each function related with setting the rate or adding/removing executors the balance of the owner is checked and if the balance is lower than 0.01 ETH then 1 more ETH are sent to the owner address in order to pay for the gas fees related with those transactions.  
 The owner is an address owned by the association governing the smart contract.
-```
+```solidity
 if (isFundingNeeded(owner)) {
     owner.transfer(1 ether);
 }
@@ -65,8 +57,9 @@ mapping (address => mapping (address => PullPayment)) public pullPayments;
 The `PullPayment` struct is the following:
 ```solidity
 struct PullPayment {
-    string merchantID;                      /// ID of the merchant
-    string paymentID;                       /// ID of the payment
+    bytes32 paymentID;                      /// ID of the payment
+    bytes32 businessID;                     /// ID of the business
+    bytes32 uniqueReferenceID;              /// unique reference ID the business is adding on the pull payment
     string currency;                        /// 3-letter abbr i.e. 'EUR' / 'USD' etc.
     uint256 initialPaymentAmountInCents;    /// initial payment amount in fiat in cents
     uint256 fiatAmountInCents;              /// payment amount in fiat in cents
@@ -76,140 +69,224 @@ struct PullPayment {
     uint256 nextPaymentTimestamp;           /// timestamp of next payment
     uint256 lastPaymentTimestamp;           /// timestamp of last payment
     uint256 cancelTimestamp;                /// timestamp the payment was cancelled
+    address treasuryAddress;                /// address which pma tokens will be transfer to on execution
 }
 ```
 #### Constants
 ```solidity
-uint256 constant private DECIMAL_FIXER = 10000000000; // 1e^10 - This transforms the Rate from decimals to uint256
-uint256 constant private FIAT_TO_CENT_FIXER = 100;    // Fiat currencies have 100 cents in 1 basic monetary unit.
-uint256 constant private ONE_ETHER = 1 ether;         // PumaPay token has 18 decimals - same as one ETHER
-uint256 constant private MINIMUM_AMOUN_OF_ETH_FOR_OPARATORS = 0.01 ether; // minimum amount of ETHER the owner/executor should have 
+uint256 constant private DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256
+uint256 constant private FIAT_TO_CENT_FIXER = 100;    /// Fiat currencies have 100 cents in 1 basic monetary unit.
+uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20; /// 1e^20 - Prevent numeric overflows
+
+uint256 constant private ONE_ETHER = 1 ether;         /// PumaPay token has 18 decimals - same as one ETHER
+uint256 constant private FUNDING_AMOUNT = 1 ether;  /// Amount to transfer to owner/executor
+uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor 
 ```
 #### Public Functions - Owner
 ##### addExecutor()
 Adds an existing executor. It can be executed only by the owner.
 The balance of the owner is checked and if funding is needed 1 ETH is transferred.
-```solididty
-function addExecutor(address _executor)
+```solidity
+function addExecutor(address payable _executor)
+public
+onlyOwner
+isValidAddress(_executor)
+executorDoesNotExists(_executor)
 ```
 ##### removeExecutor()
 Removes an existing executor. It can be executed only by the onwer.  
 The balance of the owner is checked and if funding is needed 1 ETH is transferred.
-```solididty
-function removeExecutor(address _executor)
-```
-##### setRate()
-Sets the exchange rate for a currency. It can be executed only by the onwer.  
-The balance of the owner is checked and if funding is needed 1 ETH is transferred.
-```solididty
-function setRate(string _currency, uint256 _rate)
+```solidity
+function removeExecutor(address payable _executor)
+public
+onlyOwner
+isValidAddress(_executor)
+executorExists(_executor)
 ```
 
 #### Public Functions - Executor
 ##### registerPullPayment()
 Registers a new pull payment to the PumaPay Pull Payment Contract. The registration can be executed only by one of the `executors` of the PumaPay Pull Payment Contract and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the client of the account.
+On pull payment registration, the first execution of the pull payment happens as well i.e. transfer of PMA from the customer to the business treasury wallet.
 The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
-```solididty
-function registerPullPayment (
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        string _merchantID,
-        string _paymentID,
-        address _client,
-        address _beneficiary,
-        string _currency,
-        uint256 _initialPaymentAmountInCents,
-        uint256 _fiatAmountInCents,
-        uint256 _frequency,
-        uint256 _numberOfPayments,
-        uint256 _startTimestamp
-    )
+```solidity
+function registerPullPayment(
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes32[4] memory _paymentDetails, // 0 paymentID, 1 businessID, 2 uniqueReferenceID, 3 paymentType
+    address[3] memory _addresses, // 0 customer, 1 pull payment executor, 2 treasury
+    uint256[3] memory _paymentAmounts, // 0 _initialConversionRate, 1 _fiatAmountInCents, 2 _initialPaymentAmountInCents
+    uint256[4] memory _paymentTimestamps, // 0 _frequency, 1 _numberOfPayments, 2 _startTimestamp, 3 _trialPeriod
+    string memory _currency
+)
+public
+isExecutor()
+isValidPaymentType(_paymentDetails[3])
 ```
 ##### deletePullPayment()
 Deletes a pull payment for a beneficiary. The deletion needs can be executed only by one of the `executors` of the PumaPay Pull Payment Contract and the PumaPay Pull Payment Contract checks that the beneficiary and the paymentID have been singed by the client of the account. This method sets the cancellation of the pull payment in the pull payments array for this beneficiary specified.
 The balance of the executor (msg.sender) is checked and if funding is needed, 1 ETH is transferred.
-```solididty
-function deletePullPayment (
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        string _paymentID,
-        address _client,
-        address _beneficiary
-    )
+```solidity
+function deletePullPayment(
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes32 _paymentID,
+    address _customerAddress,
+    address _pullPaymentExecutor
+)
+public
+isExecutor()
+paymentExists(_customerAddress, _pullPaymentExecutor)
+paymentNotCancelled(_customerAddress, _pullPaymentExecutor)
+isValidDeletionRequest(_paymentID, _customerAddress, _pullPaymentExecutor)
 ```
 
 #### Public Functions
 ##### executePullPayment()
+```solidity
+function executePullPayment(address _customerAddress, bytes32 _paymentID, uint256 _conversionRate)
+public
+paymentExists(_customerAddress, msg.sender)
+isValidPullPaymentExecutionRequest(_customerAddress, msg.sender, _paymentID)
+validAmount(_conversionRate)
+returns (bool)
+```
 Executes a pull payment for the address that is calling the function `msg.sender`. The pull payment should exist and the payment request should be valid in terms of when it can be executed.
-* Use Case 1: Single/Recurring Fixed Pull Payment (`initialPaymentAmountInCents == 0`)
-We calculate the amount in PMA using the rate for the currency specified in the pull payment and the `fiatAmountInCents` and we transfer from the client account the amount in PMA.
-After execution we set the last payment timestamp to NOW, the next payment timestamp is incremented by the frequency and the number of payments is decresed by 1.
-* Use Case 2: Recurring Fixed Pull Payment with initial fee (`initialPaymentAmountInCents > 0`)
-We calculate the amount in PMA using the rate for the currency specified in the pull payment
-and the 'initialPaymentAmountInCents' and we transfer from the client account the amount in PMA.
-After execution we set the last payment timestamp to NOW and the `initialPaymentAmountInCents` to ZERO.
+The execution of the pull payment will transfer PMA from the customer wallet to the business treasury wallet. 
 
 #### Internal Functions
 ##### isValidRegistration()
-Checks if a registration request is valid by comparing the `v, r, s` params and the hashed params with the client. address. The hashed parameters is the `beneficiary` (merchant) address, the `currency`, the `initialPaymentAmountInCents`, `fiatAmountInCents`, `frequency`, `numberOfPayments` and `startTimestamp`.
-```
-ecrecover(
-    keccak256(
-        abi.encodePacked(
-            _beneficiary,
-            _pullPayment.currency,
-            _pullPayment.initialPaymentAmountInCents,
-            _pullPayment.fiatAmountInCents,
-            _pullPayment.frequency,
-            _pullPayment.numberOfPayments,
-            _pullPayment.startTimestamp
-        )
-),
-v, r, s) == _client;
+Checks if a registration request is valid by comparing the `v, r, s` params and the hashed params with the client. address. 
+```solidity
+function isValidRegistration(
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    address _customerAddress,
+    address _pullPaymentExecutor,
+    PullPayment memory _pullPayment
+)
+internal
+pure
+returns (bool)
+{
+    return ecrecover(
+        keccak256(
+            abi.encodePacked(
+                _pullPaymentExecutor,
+                _pullPayment.paymentIds[0],
+                _pullPayment.paymentType,
+                _pullPayment.treasuryAddress,
+                _pullPayment.currency,
+                _pullPayment.initialConversionRate,
+                _pullPayment.initialPaymentAmountInCents,
+                _pullPayment.fiatAmountInCents,
+                _pullPayment.frequency,
+                _pullPayment.numberOfPayments,
+                _pullPayment.startTimestamp,
+                _pullPayment.trialPeriod
+            )
+        ),
+        v, r, s) == _customerAddress;
+}
 ```   
 More about recovery ID of an ETH signature and ECDSA signatures can be found [here](https://github.com/ethereum/EIPs/issues/155).
 ##### isValidDeletion()
 Checks if a deletion request is valid by comparing the `v, r, s` params and the hashed params with the client. address and the `paymentID` itself as well. The hashed parameters is the `paymentID` and the `beneficiary` (merchant) address.
-```
-ecrecover(
-    keccak256(
-        abi.encodePacked(
-            _paymentID,
-            _beneficiary
-        )
-    ), v, r, s) == _client
+```solidity
+function isValidDeletion(
+    uint8 v,
+    bytes32 r,
+    bytes32 s,
+    bytes32 _paymentID,
+    address _customerAddress,
+    address _pullPaymentExecutor
+)
+internal
+view
+returns (bool)
+{
+    return ecrecover(
+        keccak256(
+            abi.encodePacked(
+                _paymentID,
+                _pullPaymentExecutor
+            )
+        ), v, r, s) == _customerAddress
     && keccak256(
-        abi.encodePacked(pullPayments[_client][_beneficiary].paymentID)
-        ) == keccak256(abi.encodePacked(_paymentID));
+        abi.encodePacked(pullPayments[_customerAddress][_pullPaymentExecutor].paymentIds[0])
+    ) == keccak256(abi.encodePacked(_paymentID)
+    );
+}
 ``` 
 ##### calculatePMAFromFiat()
 Calculates the PMA Rate for the fiat currency specified. The rate is set every 10 minutes by our PMA server for the currencies specified in the smart contract. Two helpers/fixers are used for this calculation:
-1. `ONE_ETHER` - 
+1. `ONE_ETHER` - One ETH in wei
 2. `DECIMAL_FIXER` - Transforms the Rate from `decimals` to `uint256` and is the same value that is being used for setting the rate
 3. `FIAT_TO_CENT_FIXER` - The payment amounts that are being used in the smart contract are noted in CENTS since `decimals` are not supported in `solidity` yet.
 Calculation: 
-```
+```solidity
+function calculatePMAFromFiat(uint256 _fiatAmountInCents, uint256 _conversionRate)
+internal
+pure
+validAmount(_fiatAmountInCents)
+validAmount(_conversionRate)
+returns (uint256) {
+    return ONE_ETHER.mul(DECIMAL_FIXER).mul(_fiatAmountInCents).div(_conversionRate).div(FIAT_TO_CENT_FIXER);
+}
 ```
 ##### doesPaymentExist()
-Checks if a payment for a beneficiary (merchant) of a client exists.
+Checks if a payment for a pull payment executor of a client exists.
 ##### isFundingNeeded()
 Checks if the address of the `owner` or an `executor` needs to be funded. 
 The minimum amount the owner/executors should always have is 0.01 ETH 
 
 #### Events
-```
-event LogExecutorAdded(address executor);       // When adding a new executor
-event LogExecutorRemoved(address executor);     // When removing an existing executor
-event LogPaymentRegistered(address clientAddress, address beneficiaryAddress, string paymentID);    // When registering a new pull payment
-event LogPaymentCancelled(address clientAddress, address beneficiaryAddress, string paymentID);     // When removing a new pull payment
-event LogPullPaymentExecuted(address clientAddress, address beneficiaryAddress, string paymentID);  // When executing a pull payment
-event LogSetExchangeRate(string currency, uint256 exchangeRate);        // When updating the PMA/FIAT rates
+```solidity
+event LogExecutorAdded(address executor);   // When adding a new executor
+event LogExecutorRemoved(address executor); // When removing an existing executor
+
+// When registering a new pull payment
+event LogPaymentRegistered(
+    address customerAddress,
+    bytes32 paymentID,
+    bytes32 businessID,
+    bytes32 uniqueReferenceID
+);
+
+// When removing a new pull payment
+event LogPaymentCancelled(
+    address customerAddress,
+    bytes32 paymentID,
+    bytes32 businessID,
+    bytes32 uniqueReferenceID
+);
+
+// When executing a pull payment
+event LogPullPaymentExecuted(
+    address customerAddress,
+    bytes32 paymentID,
+    bytes32 businessID,
+    bytes32 uniqueReferenceID,
+    uint256 amountInPMA,
+    uint256 conversionRate
+);
 ```
 ## Development
 * Contracts are written in [Solidity](https://solidity.readthedocs.io/en/develop/) and tested using [Truffle](http://truffleframework.com/) and [Ganache-cli](https://github.com/trufflesuite/ganache-cli).
 * All the smart contracts have been developed based on modules developed by [Open Zepellin](https://openzeppelin.org/).
+* Solc Version: 0.5.8 - To update the solc version in truffle use. To use a different solc version update `scripts/solc.sh`
+```bash
+$ npm run solc-update
+```
+
+## Tests
+To run the tests you can run 
+```bash
+$ npm test
+```
 
 ## Audits
 Our smart contracts have been audited by several auditing companies and blockchain experts.
