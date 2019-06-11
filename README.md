@@ -10,8 +10,9 @@ Our Pull Payment Protocol currently supports a variaty of payments models such a
 * Recurring Pull Payment (Fixed amount / Fixed period)
 * Recurring Pull Payment with initial payment 
 * Recurring Pull Payment with trial period (free trial)
-* Recurring Pull Payment with initial payment and trial period (paid trial)  
-The first version of our protocol has a semi-decentralized approach in order to reduced the gas fees that are involved with setting the PMA/Fiat rates on the blockchain and eliminate the customer costs for registering and cancelling pull payments, which are currently taken care of by PumaPay through the smart contract.  
+* Recurring Pull Payment with initial payment and trial period (paid trial)    
+
+The current version of our protocol has a semi-decentralized approach in order to reduced the gas fees that are involved with setting the PMA/Fiat rates on the blockchain and eliminate the customer costs for registering and cancelling pull payments, which are currently taken care of by PumaPay through the smart contract.  
 In order for the smart contract to operate correctly, it requires that the smart contract holds ETH which are used for funding the owner address and the executors. 
 The smart contract will be monitored and once its balance drops below 2 ETH it will be funded with more ETH.
 ### PullPayment Contract 
@@ -57,15 +58,16 @@ mapping (address => mapping (address => PullPayment)) public pullPayments;
 The `PullPayment` struct is the following:
 ```solidity
 struct PullPayment {
-    bytes32 paymentID;                      /// ID of the payment
-    bytes32 businessID;                     /// ID of the business
-    bytes32 uniqueReferenceID;              /// unique reference ID the business is adding on the pull payment
+    bytes32[3] paymentIds;                  /// [0] paymentID / [1] businessID / [2] uniqueReferenceID
+    bytes32 paymentType;                    /// Type of Pull Payment - must be one of the defined pull payment types
     string currency;                        /// 3-letter abbr i.e. 'EUR' / 'USD' etc.
+    uint256 initialConversionRate;          /// conversion rate for first payment execution
     uint256 initialPaymentAmountInCents;    /// initial payment amount in fiat in cents
     uint256 fiatAmountInCents;              /// payment amount in fiat in cents
     uint256 frequency;                      /// how often merchant can pull - in seconds
     uint256 numberOfPayments;               /// amount of pull payments merchant can make
     uint256 startTimestamp;                 /// when subscription starts - in seconds
+    uint256 trialPeriod;                    /// trial period of the pull payment - in seconds
     uint256 nextPaymentTimestamp;           /// timestamp of next payment
     uint256 lastPaymentTimestamp;           /// timestamp of last payment
     uint256 cancelTimestamp;                /// timestamp the payment was cancelled
@@ -80,7 +82,14 @@ uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20; /// 1e^20 - Prevent
 
 uint256 constant private ONE_ETHER = 1 ether;         /// PumaPay token has 18 decimals - same as one ETHER
 uint256 constant private FUNDING_AMOUNT = 1 ether;  /// Amount to transfer to owner/executor
-uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor 
+uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor
+
+bytes32 constant private TYPE_SINGLE_PULL_PAYMENT = "2";
+bytes32 constant private TYPE_RECURRING_PULL_PAYMENT = "3";
+bytes32 constant private TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL = "4";
+bytes32 constant private TYPE_PULL_PAYMENT_WITH_FREE_TRIAL = "5";
+bytes32 constant private TYPE_PULL_PAYMENT_WITH_PAID_TRIAL = "6";
+bytes32 constant private TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
 ```
 #### Public Functions - Owner
 ##### addExecutor()
@@ -94,7 +103,7 @@ isValidAddress(_executor)
 executorDoesNotExists(_executor)
 ```
 ##### removeExecutor()
-Removes an existing executor. It can be executed only by the onwer.  
+Removes an existing executor. It can be executed only by the owner.  
 The balance of the owner is checked and if funding is needed 1 ETH is transferred.
 ```solidity
 function removeExecutor(address payable _executor)
@@ -107,7 +116,7 @@ executorExists(_executor)
 #### Public Functions - Executor
 ##### registerPullPayment()
 Registers a new pull payment to the PumaPay Pull Payment Contract. The registration can be executed only by one of the `executors` of the PumaPay Pull Payment Contract and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the client of the account.
-On pull payment registration, the first execution of the pull payment happens as well i.e. transfer of PMA from the customer to the business treasury wallet.
+On pull payment registration, the first execution of the pull payment happens as well i.e. transfer of PMA from the customer to the business treasury wallet. This will happen based on the pull payment type. 
 The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
 ```solidity
 function registerPullPayment(
@@ -289,11 +298,15 @@ $ npm test
 ```
 
 ## Audits
-Our smart contracts have been audited by several auditing companies and blockchain experts.
+Our smart contracts have been audited by several auditing companies and blockchain experts.   
 #### PumaPay Token
-Our token was audited by [SmartDec](https://smartdec.net/) and the audit report can be found [here](./audits/PumaPay%20Token%20Security%20Audit%20-%20SmartDec.pdf).
-#### PumaPay PullPayment
+Our token was audited by [SmartDec](https://smartdec.net/) and the audit report can be found [here](https://github.com/pumapayio/pumapay-token/blob/master/audits/PumaPay%20Token%20Security%20Audit%20-%20SmartDec.pdf).
+#### PumaPay PullPayment V1
 Our PullPayment Protocol has been audited by three separete auditing companies - [SmartDec](https://smartdec.net/) and [Hacken](https://hacken.io/) -  to ensure that the desired functionality
 and the relevant security is in place on top of the elimination of any bugs and vulnerabilities.
-* [Hacken Audit Report](./audits/PullPayment%20Smart%20Contract%20-%20Hacken.pdf)
-* [SmartDec Audit Report](./audits/PullPayment%20Smart%20Contract%20-%20SmartDec.pdf)
+* [Hacken Audit Report](https://github.com/pumapayio/pumapay-token/blob/master/audits/PullPayment%20Smart%20Contract%20-%20Hacken.pdf)
+* [SmartDec Audit Report](https://github.com/pumapayio/pumapay-token/blob/master/audits/PullPayment%20Smart%20Contract%20-%20SmartDec.pdf)
+
+#### PumaPay PullPayment V2
+The V2 of the smart contracts are currently under auditing. 
+The updated reports will be uploaded to the repository once the auditing process is finished.
