@@ -540,7 +540,6 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
                     _pullPayment.paymentType,
                     _pullPayment.treasuryAddress,
                     _pullPayment.currency,
-                    _pullPayment.initialConversionRate,
                     _pullPayment.initialPaymentAmountInCents,
                     _pullPayment.fiatAmountInCents,
                     _pullPayment.frequency,

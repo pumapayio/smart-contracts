@@ -77,9 +77,6 @@ const calcSignedMessageForRegistrationV2 = async (pullPayment, privateKey) => {
       value: pullPayment.currency
     }, {
       type: 'uint256',
-      value: pullPayment.initialConversionRate
-    }, {
-      type: 'uint256',
       value: pullPayment.initialPaymentAmountInCents
     }, {
       type: 'uint256',
