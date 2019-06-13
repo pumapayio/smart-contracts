@@ -26,7 +26,7 @@ const calcSignedMessageForRegistration = async (pullPayment, privateKey) => {
       type: 'bytes32',
       value: pullPayment.businessID
     }, {
-      type: 'bytes32',
+      type: 'string',
       value: pullPayment.uniqueReferenceID
     }, {
       type: 'address',

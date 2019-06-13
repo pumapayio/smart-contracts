@@ -7,7 +7,6 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 
 /// @title PumaPay Pull Payment - Contract that facilitates our pull payment protocol
 /// @author PumaPay Dev Team - <developers@pumapay.io>
-
 contract PumaPayPullPayment is PayableOwnable {
 
     using SafeMath for uint256;
@@ -24,31 +23,31 @@ contract PumaPayPullPayment is PayableOwnable {
         address customerAddress,
         bytes32 paymentID,
         bytes32 businessID,
-        bytes32 uniqueReferenceID
+        string uniqueReferenceID
     );
     event LogPaymentCancelled(
         address customerAddress,
         bytes32 paymentID,
         bytes32 businessID,
-        bytes32 uniqueReferenceID
+        string uniqueReferenceID
     );
     event LogPullPaymentExecuted(
         address customerAddress,
         bytes32 paymentID,
         bytes32 businessID,
-        bytes32 uniqueReferenceID
+        string uniqueReferenceID
     );
 
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
 
-    uint256 constant private DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256
-    uint256 constant private FIAT_TO_CENT_FIXER = 100;    /// Fiat currencies have 100 cents in 1 basic monetary unit.
-    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20; /// 1e^20 - Prevent numeric overflows
+    uint256 constant private DECIMAL_FIXER = 10 ** 10;              /// 1e^10 - This transforms the Rate from decimals to uint256
+    uint256 constant private FIAT_TO_CENT_FIXER = 100;              /// Fiat currencies have 100 cents in 1 basic monetary unit.
+    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
 
-    uint256 constant private ONE_ETHER = 1 ether;         /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant private FUNDING_AMOUNT = 1 ether;  /// Amount to transfer to owner/executor
+    uint256 constant private ONE_ETHER = 1 ether;                               /// PumaPay token has 18 decimals - same as one ETHER
+    uint256 constant private FUNDING_AMOUNT = 1 ether;                          /// Amount to transfer to owner/executor
     uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor
 
     /// ===============================================================================================================
@@ -64,7 +63,7 @@ contract PumaPayPullPayment is PayableOwnable {
     struct PullPayment {
         bytes32 paymentID;                      /// ID of the payment
         bytes32 businessID;                     /// ID of the business
-        bytes32 uniqueReferenceID;              /// unique reference ID the business is adding on the pull payment
+        string uniqueReferenceID;               /// unique reference ID the business is adding on the pull payment
         string currency;                        /// 3-letter abbr i.e. 'EUR' / 'USD' etc.
         uint256 initialPaymentAmountInCents;    /// initial payment amount in fiat in cents
         uint256 fiatAmountInCents;              /// payment amount in fiat in cents
@@ -154,7 +153,6 @@ contract PumaPayPullPayment is PayableOwnable {
 
     /// @dev Contract constructor - sets the token address that the contract facilitates.
     /// @param _token Token Address.
-
     constructor (address _token)
     public {
         require(_token != address(0), "Invalid address for token - ZERO_ADDRESS provided");
@@ -237,9 +235,10 @@ contract PumaPayPullPayment is PayableOwnable {
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
-    /// @param _ids - all the relevant IDs for the payment.
+    /// @param _ids - array with the IDs for the payment ([0] paymentID, [1] businessID).
     /// @param _addresses - all the relevant addresses for the payment.
     /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
+    /// @param _uniqueReferenceID - unique reference ID is the id that the business uses within their system.
     /// @param _fiatAmountInCents - payment amount in fiat in cents.
     /// @param _frequency - how often merchant can pull - in seconds.
     /// @param _numberOfPayments - amount of pull payments merchant can make
@@ -248,9 +247,10 @@ contract PumaPayPullPayment is PayableOwnable {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        bytes32[3] memory _ids, // 0 paymentID, 1 businessID, 2 uniqueReferenceID
+        bytes32[2] memory _ids, // [0] paymentID, [1] businessID
         address[3] memory _addresses, // 0 customer, 1 pull payment executor, 2 treasury
         string memory _currency,
+        string memory _uniqueReferenceID,
         uint256 _initialPaymentAmountInCents,
         uint256 _fiatAmountInCents,
         uint256 _frequency,
@@ -262,8 +262,8 @@ contract PumaPayPullPayment is PayableOwnable {
     {
         require(_ids[0].length > 0, "Payment ID is empty.");
         require(_ids[1].length > 0, "Business ID is empty.");
-        require(_ids[2].length > 0, "Unique Reference ID is empty.");
-        require(bytes(_currency).length > 0, "Currency is empty");
+        require(bytes(_currency).length > 0, "Currency is empty.");
+        require(bytes(_uniqueReferenceID).length > 0, "Unique Reference ID is empty.");
         require(_addresses[0] != address(0), "Customer Address is ZERO_ADDRESS.");
         require(_addresses[1] != address(0), "Beneficiary Address is ZERO_ADDRESS.");
         require(_addresses[2] != address(0), "Treasury Address is ZERO_ADDRESS.");
@@ -283,7 +283,7 @@ contract PumaPayPullPayment is PayableOwnable {
         pullPayments[_addresses[0]][_addresses[1]].numberOfPayments = _numberOfPayments;
         pullPayments[_addresses[0]][_addresses[1]].paymentID = _ids[0];
         pullPayments[_addresses[0]][_addresses[1]].businessID = _ids[1];
-        pullPayments[_addresses[0]][_addresses[1]].uniqueReferenceID = _ids[2];
+        pullPayments[_addresses[0]][_addresses[1]].uniqueReferenceID = _uniqueReferenceID;
         pullPayments[_addresses[0]][_addresses[1]].treasuryAddress = _addresses[2];
 
         require(isValidRegistration(
@@ -304,7 +304,7 @@ contract PumaPayPullPayment is PayableOwnable {
             msg.sender.transfer(FUNDING_AMOUNT);
         }
 
-        emit LogPaymentRegistered(_addresses[0], _ids[0], _ids[1], _ids[2]);
+        emit LogPaymentRegistered(_addresses[0], _ids[0], _ids[1], _uniqueReferenceID);
     }
 
     /// @dev Deletes a pull payment for a beneficiary - The deletion needs can be executed only by one of the

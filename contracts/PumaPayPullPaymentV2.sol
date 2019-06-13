@@ -7,7 +7,7 @@ import "./ownership/PayableOwnable.sol";
 
 /// @title PumaPay Pull Payment V2.0 - Contract that facilitates our pull payment protocol
 /// V2.0 of the protocol removes the rates being set globally on the smart contract and it allows to pass the rate on
-/// pull payment registartion and pull payment execution. In addition, when a registration of a pull payment takes place
+/// pull payment registration and pull payment execution. In addition, when a registration of a pull payment takes place
 /// the first execution of the pull payment happens as well.
 /// @author PumaPay Dev Team - <developers@pumapay.io>
 contract PumaPayPullPaymentV2 is PayableOwnable {
@@ -270,16 +270,16 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
         require(_addresses[2] != address(0), "Treasury Address is ZERO_ADDRESS.");
 
         require(_paymentAmounts[0] > 0, "Initial conversion rate is zero.");
-        require(_paymentAmounts[0] < OVERFLOW_LIMITER_NUMBER, "Initial conversion rate is higher thant the overflow limit.");
         require(_paymentAmounts[1] > 0, "Payment amount in fiat is zero.");
+        require(_paymentTimestamps[0] > 0, "Payment frequency is zero.");
+        require(_paymentTimestamps[1] > 0, "Payment number of payments is zero.");
+        require(_paymentTimestamps[2] > 0, "Payment start time is zero.");
+
+        require(_paymentAmounts[0] < OVERFLOW_LIMITER_NUMBER, "Initial conversion rate is higher thant the overflow limit.");
         require(_paymentAmounts[1] < OVERFLOW_LIMITER_NUMBER, "Payment amount in fiat is higher thant the overflow limit.");
         require(_paymentAmounts[2] < OVERFLOW_LIMITER_NUMBER, "Payment initial amount in fiat is higher thant the overflow limit.");
-
-        require(_paymentTimestamps[0] > 0, "Payment frequency is zero.");
         require(_paymentTimestamps[0] < OVERFLOW_LIMITER_NUMBER, "Payment frequency is higher thant the overflow limit.");
-        require(_paymentTimestamps[1] > 0, "Payment number of payments is zero.");
         require(_paymentTimestamps[1] < OVERFLOW_LIMITER_NUMBER, "Payment number of payments is higher thant the overflow limit.");
-        require(_paymentTimestamps[2] > 0, "Payment start time is zero.");
         require(_paymentTimestamps[2] < OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
         require(_paymentTimestamps[3] < OVERFLOW_LIMITER_NUMBER, "Payment trial period is higher thant the overflow limit.");
 
