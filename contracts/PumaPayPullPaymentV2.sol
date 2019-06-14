@@ -168,7 +168,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
             _paymentType == TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL ||
             _paymentType == TYPE_PULL_PAYMENT_WITH_FREE_TRIAL ||
             _paymentType == TYPE_PULL_PAYMENT_WITH_PAID_TRIAL
-            ), "Payment Type proved not supported");
+            ), "Payment Type provided not supported");
         _;
     }
 
@@ -235,10 +235,10 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
     /// @dev Registers a new pull payment to the PumaPay Pull Payment Contract - The registration can be executed only
     /// by one of the executors of the PumaPay Pull Payment Contract
-    /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the client of the account.
+    /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
     /// If the pull payment doesn't have a trial period, the first execution will take place.
     /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
-    /// Emits 'LogPaymentRegistered' with client address, beneficiary address and paymentID.
+    /// Emits 'LogPaymentRegistered' with customer address, beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
@@ -364,7 +364,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// @dev Deletes a pull payment for a beneficiary - The deletion needs can be executed only by one of the
     /// executors of the PumaPay Pull Payment Contract
     /// and the PumaPay Pull Payment Contract checks that the beneficiary and the paymentID have
-    /// been singed by the client of the account.
+    /// been singed by the customer of the account.
     /// This method sets the cancellation of the pull payment in the pull payments array for this beneficiary specified.
     /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
     /// Emits 'LogPaymentCancelled' with beneficiary address and paymentID.
@@ -372,7 +372,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
     /// @param _paymentID - ID of the payment.
-    /// @param _customerAddress - client address that is linked to this pull payment.
+    /// @param _customerAddress - customer address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
     function deletePullPayment(
         uint8 v,
@@ -410,19 +410,19 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
     /// @dev Executes a pull payment for the msg.sender - The pull payment should exist and the payment request
     /// should be valid in terms of when it can be executed.
-    /// Emits 'LogPullPaymentExecuted' with client address, msg.sender as the beneficiary address and the paymentID.
+    /// Emits 'LogPullPaymentExecuted' with customer address, msg.sender as the beneficiary address and the paymentID.
     /// Use Case 1: Single/Recurring Fixed Pull Payment (initialPaymentAmountInCents == 0 )
     /// ------------------------------------------------
     /// We calculate the amount in PMA using the rate for the currency specified in the pull payment
-    /// and the 'fiatAmountInCents' and we transfer from the client account the amount in PMA.
+    /// and the 'fiatAmountInCents' and we transfer from the customer account the amount in PMA.
     /// After execution we set the last payment timestamp to NOW, the next payment timestamp is incremented by
     /// the frequency and the number of payments is decreased by 1.
     /// Use Case 2: Recurring Fixed Pull Payment with initial fee (initialPaymentAmountInCents > 0)
     /// ------------------------------------------------------------------------------------------------
     /// We calculate the amount in PMA using the rate for the currency specified in the pull payment
-    /// and the 'initialPaymentAmountInCents' and we transfer from the client account the amount in PMA.
+    /// and the 'initialPaymentAmountInCents' and we transfer from the customer account the amount in PMA.
     /// After execution we set the last payment timestamp to NOW and the 'initialPaymentAmountInCents to ZERO.
-    /// @param _customerAddress - address of the client from which the msg.sender requires to pull funds.
+    /// @param _customerAddress - address of the customer from which the msg.sender requires to pull funds.
     /// @param _paymentID - ID of the payment.
     /// @param _conversionRate - conversion rate with which the payment needs to take place
     function executePullPayment(address _customerAddress, bytes32 _paymentID, uint256 _conversionRate)
@@ -512,14 +512,14 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     }
 
     /// @dev Checks if a registration request is valid by comparing the v, r, s params
-    /// and the hashed params with the client address.
+    /// and the hashed params with the customer address.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
-    /// @param _customerAddress - client address that is linked to this pull payment.
+    /// @param _customerAddress - customer address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
     /// @param _pullPayment - pull payment to be validated.
-    /// @return bool - if the v, r, s params with the hashed params match the client address
+    /// @return bool - if the v, r, s params with the hashed params match the customer address
     function isValidRegistration(
         uint8 v,
         bytes32 r,
@@ -552,14 +552,14 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     }
 
     /// @dev Checks if a deletion request is valid by comparing the v, r, s params
-    /// and the hashed params with the client address.
+    /// and the hashed params with the customer address.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
     /// @param _paymentID - ID of the payment.
-    /// @param _customerAddress - client address that is linked to this pull payment.
+    /// @param _customerAddress - customer address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
-    /// @return bool - if the v, r, s params with the hashed params match the client address
+    /// @return bool - if the v, r, s params with the hashed params match the customer address
     function isValidDeletion(
         uint8 v,
         bytes32 r,
@@ -585,10 +585,10 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
         );
     }
 
-    /// @dev Checks if a payment for a beneficiary of a client exists.
-    /// @param _customerAddress - client address that is linked to this pull payment.
+    /// @dev Checks if a payment for a beneficiary of a customer exists.
+    /// @param _customerAddress - customer address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address to execute a pull payment.
-    /// @return bool - whether the beneficiary for this client has a pull payment to execute.
+    /// @return bool - whether the beneficiary for this customer has a pull payment to execute.
     function doesPaymentExist(address _customerAddress, address _pullPaymentExecutor)
     internal
     view
