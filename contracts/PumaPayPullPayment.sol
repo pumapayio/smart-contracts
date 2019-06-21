@@ -19,23 +19,23 @@ contract PumaPayPullPayment is PayableOwnable {
     event LogExecutorRemoved(address executor);
     event LogSetConversionRate(string currency, uint256 conversionRate);
 
-    event LogPaymentRegistered(
+    event LogPullPaymentRegistered(
         address customerAddress,
         bytes32 paymentID,
-        bytes32 businessID,
         string uniqueReferenceID
     );
-    event LogPaymentCancelled(
+
+    event LogPullPaymentCancelled(
         address customerAddress,
         bytes32 paymentID,
-        bytes32 businessID,
         string uniqueReferenceID
     );
+
     event LogPullPaymentExecuted(
         address customerAddress,
         bytes32 paymentID,
-        bytes32 businessID,
-        string uniqueReferenceID
+        string uniqueReferenceID,
+        uint256 pmaAmountTransferred
     );
 
     /// ===============================================================================================================
@@ -47,8 +47,8 @@ contract PumaPayPullPayment is PayableOwnable {
     uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
 
     uint256 constant private ONE_ETHER = 1 ether;                               /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant private FUNDING_AMOUNT = 1 ether;                          /// Amount to transfer to owner/executor
-    uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor
+    uint256 constant private FUNDING_AMOUNT = 0.5 ether;                          /// Amount to transfer to owner/executor
+    uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;  /// min amount of ETH for owner/executor
 
     /// ===============================================================================================================
     ///                                      Members
@@ -231,7 +231,7 @@ contract PumaPayPullPayment is PayableOwnable {
     /// by one of the executors of the PumaPay Pull Payment Contract
     /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
     /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
-    /// Emits 'LogPaymentRegistered' with customer address, beneficiary address and paymentID.
+    /// Emits 'LogPullPaymentRegistered' with customer address, beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
@@ -304,7 +304,11 @@ contract PumaPayPullPayment is PayableOwnable {
             msg.sender.transfer(FUNDING_AMOUNT);
         }
 
-        emit LogPaymentRegistered(_addresses[0], _ids[0], _ids[1], _uniqueReferenceID);
+        emit LogPullPaymentRegistered(
+            _addresses[0],
+            _ids[0],
+            _uniqueReferenceID
+        );
     }
 
     /// @dev Deletes a pull payment for a beneficiary - The deletion needs can be executed only by one of the
@@ -313,7 +317,7 @@ contract PumaPayPullPayment is PayableOwnable {
     /// been singed by the customer of the account.
     /// This method sets the cancellation of the pull payment in the pull payments array for this beneficiary specified.
     /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
-    /// Emits 'LogPaymentCancelled' with beneficiary address and paymentID.
+    /// Emits 'LogPullPaymentCancelled' with beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
@@ -342,10 +346,9 @@ contract PumaPayPullPayment is PayableOwnable {
             msg.sender.transfer(FUNDING_AMOUNT);
         }
 
-        emit LogPaymentCancelled(
+        emit LogPullPaymentCancelled(
             _customer,
             _paymentID,
-            pullPayments[_customer][_pullPaymentExecutor].businessID,
             pullPayments[_customer][_pullPaymentExecutor].uniqueReferenceID
         );
     }
@@ -404,8 +407,8 @@ contract PumaPayPullPayment is PayableOwnable {
         emit LogPullPaymentExecuted(
             _customer,
             pullPayments[_customer][msg.sender].paymentID,
-            pullPayments[_customer][msg.sender].businessID,
-            pullPayments[_customer][msg.sender].uniqueReferenceID
+            pullPayments[_customer][msg.sender].uniqueReferenceID,
+            amountInPMA
         );
     }
 
