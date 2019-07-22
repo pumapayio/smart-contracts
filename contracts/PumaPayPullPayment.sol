@@ -19,6 +19,8 @@ contract PumaPayPullPayment is PayableOwnable {
     event LogExecutorRemoved(address executor);
     event LogSetConversionRate(string currency, uint256 conversionRate);
 
+    event LogSmartContractActorFunded(string actorRole, address payable actor, uint256 timestamp);
+
     event LogPaymentRegistered(
         address customerAddress,
         bytes32 paymentID,
@@ -183,8 +185,12 @@ contract PumaPayPullPayment is PayableOwnable {
         _executor.transfer(FUNDING_AMOUNT);
         executors[_executor] = true;
 
+        emit LogSmartContractActorFunded("executor", _executor, now);
+
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("owner", owner(), now);
         }
 
         emit LogExecutorAdded(_executor);
@@ -202,6 +208,8 @@ contract PumaPayPullPayment is PayableOwnable {
         executors[_executor] = false;
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("owner", owner(), now);
         }
         emit LogExecutorRemoved(_executor);
     }
@@ -220,6 +228,8 @@ contract PumaPayPullPayment is PayableOwnable {
 
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("owner", owner(), now);
         }
 
         return true;
@@ -304,6 +314,8 @@ contract PumaPayPullPayment is PayableOwnable {
 
         if (isFundingNeeded(msg.sender)) {
             msg.sender.transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("executor", msg.sender, now);
         }
 
         emit LogPaymentRegistered(_addresses[0], _ids[0], _ids[1], _uniqueReferenceID);
@@ -342,6 +354,8 @@ contract PumaPayPullPayment is PayableOwnable {
 
         if (isFundingNeeded(msg.sender)) {
             msg.sender.transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("executor", msg.sender, now);
         }
 
         emit LogPaymentCancelled(
