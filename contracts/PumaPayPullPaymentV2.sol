@@ -48,22 +48,22 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
-    uint256 constant internal DECIMAL_FIXER = 10 ** 10;             /// 1e^10 - This transforms the Rate from decimals to uint256
-    uint256 constant internal FIAT_TO_CENT_FIXER = 100;             /// Fiat currencies have 100 cents in 1 basic monetary unit.
-    uint256 constant internal OVERFLOW_LIMITER_NUMBER = 10 ** 20;   /// 1e^20 - Prevent numeric overflows
+    uint256 constant private DECIMAL_FIXER = 10 ** 10;             /// 1e^10 - This transforms the Rate from decimals to uint256
+    uint256 constant private FIAT_TO_CENT_FIXER = 100;             /// Fiat currencies have 100 cents in 1 basic monetary unit.
+    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;   /// 1e^20 - Prevent numeric overflows
 
-    uint256 constant internal ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant internal FUNDING_AMOUNT = 0.5 ether;                           /// Amount to transfer to owner/executor
-    uint256 constant internal MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;     /// min amount of ETH for owner/executor
+    uint256 constant private ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
+    uint256 constant private FUNDING_AMOUNT = 0.5 ether;                           /// Amount to transfer to owner/executor
+    uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;     /// min amount of ETH for owner/executor
 
-    bytes32 constant internal TYPE_SINGLE_PULL_PAYMENT = "2";
-    bytes32 constant internal TYPE_RECURRING_PULL_PAYMENT = "3";
-    bytes32 constant internal TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL = "4";
-    bytes32 constant internal TYPE_PULL_PAYMENT_WITH_FREE_TRIAL = "5";
-    bytes32 constant internal TYPE_PULL_PAYMENT_WITH_PAID_TRIAL = "6";
-    bytes32 constant internal TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
+    bytes32 constant private TYPE_SINGLE_PULL_PAYMENT = "2";
+    bytes32 constant private TYPE_RECURRING_PULL_PAYMENT = "3";
+    bytes32 constant private TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL = "4";
+    bytes32 constant private TYPE_PULL_PAYMENT_WITH_FREE_TRIAL = "5";
+    bytes32 constant private TYPE_PULL_PAYMENT_WITH_PAID_TRIAL = "6";
+    bytes32 constant private TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
 
-    bytes32 constant internal EMPTY_BYTES32 = "";
+    bytes32 constant private EMPTY_BYTES32 = "";
 
     /// ===============================================================================================================
     ///                                      Members
