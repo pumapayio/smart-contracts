@@ -47,20 +47,22 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
-    uint256 constant private DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256
-    uint256 constant private FIAT_TO_CENT_FIXER = 100;    /// Fiat currencies have 100 cents in 1 basic monetary unit.
-    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20; /// 1e^20 - Prevent numeric overflows
+    uint256 constant internal DECIMAL_FIXER = 10 ** 10;             /// 1e^10 - This transforms the Rate from decimals to uint256
+    uint256 constant internal FIAT_TO_CENT_FIXER = 100;             /// Fiat currencies have 100 cents in 1 basic monetary unit.
+    uint256 constant internal OVERFLOW_LIMITER_NUMBER = 10 ** 20;   /// 1e^20 - Prevent numeric overflows
 
-    uint256 constant private ONE_ETHER = 1 ether;         /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant private FUNDING_AMOUNT = 1 ether;  /// Amount to transfer to owner/executor
-    uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor
+    uint256 constant internal ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
+    uint256 constant internal FUNDING_AMOUNT = 1 ether;                             /// Amount to transfer to owner/executor
+    uint256 constant internal MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;     /// min amount of ETH for owner/executor
 
-    bytes32 constant private TYPE_SINGLE_PULL_PAYMENT = "2";
-    bytes32 constant private TYPE_RECURRING_PULL_PAYMENT = "3";
-    bytes32 constant private TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL = "4";
-    bytes32 constant private TYPE_PULL_PAYMENT_WITH_FREE_TRIAL = "5";
-    bytes32 constant private TYPE_PULL_PAYMENT_WITH_PAID_TRIAL = "6";
-    bytes32 constant private TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
+    bytes32 constant internal TYPE_SINGLE_PULL_PAYMENT = "2";
+    bytes32 constant internal TYPE_RECURRING_PULL_PAYMENT = "3";
+    bytes32 constant internal TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL = "4";
+    bytes32 constant internal TYPE_PULL_PAYMENT_WITH_FREE_TRIAL = "5";
+    bytes32 constant internal TYPE_PULL_PAYMENT_WITH_PAID_TRIAL = "6";
+    bytes32 constant internal TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
+
+    bytes32 constant internal EMPTY_BYTES32 = "";
 
     /// ===============================================================================================================
     ///                                      Members
@@ -144,7 +146,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     modifier isValidDeletionRequest(bytes32 _paymentID, address _customerAddress, address _pullPaymentExecutor) {
         require(_customerAddress != address(0), "Invalid deletion request - Client address is ZERO_ADDRESS.");
         require(_pullPaymentExecutor != address(0), "Invalid deletion request - Beneficiary address is ZERO_ADDRESS.");
-        require(_paymentID.length != 0, "Invalid deletion request - Payment ID is empty.");
+        require(_paymentID != EMPTY_BYTES32, "Invalid deletion request - Payment ID is empty.");
         _;
     }
 
@@ -160,7 +162,6 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     }
 
     modifier isValidPaymentType(bytes32 _paymentType) {
-        require(_paymentType.length > 0, "Payment Type is empty.");
         require(
             (
             _paymentType == TYPE_SINGLE_PULL_PAYMENT ||
@@ -261,9 +262,9 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     isExecutor()
     isValidPaymentType(_paymentDetails[3])
     {
-        require(_paymentDetails[0].length > 0, "Payment ID is empty.");
-        require(_paymentDetails[1].length > 0, "Business ID is empty.");
-        require(_paymentDetails[2].length > 0, "Unique Reference ID is empty.");
+        require(_paymentDetails[0] != EMPTY_BYTES32, "Payment ID is empty.");
+        require(_paymentDetails[1] != EMPTY_BYTES32, "Business ID is empty.");
+        require(_paymentDetails[2] != EMPTY_BYTES32, "Unique Reference ID is empty.");
 
         require(_addresses[0] != address(0), "Customer Address is ZERO_ADDRESS.");
         require(_addresses[1] != address(0), "Beneficiary Address is ZERO_ADDRESS.");
