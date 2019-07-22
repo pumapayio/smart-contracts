@@ -1,7 +1,6 @@
 pragma solidity 0.5.8;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./ownership/PayableOwnable.sol";
 
@@ -54,7 +53,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     uint256 constant internal OVERFLOW_LIMITER_NUMBER = 10 ** 20;   /// 1e^20 - Prevent numeric overflows
 
     uint256 constant internal ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant internal FUNDING_AMOUNT = 1 ether;                             /// Amount to transfer to owner/executor
+    uint256 constant internal FUNDING_AMOUNT = 0.5 ether;                           /// Amount to transfer to owner/executor
     uint256 constant internal MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;     /// min amount of ETH for owner/executor
 
     bytes32 constant internal TYPE_SINGLE_PULL_PAYMENT = "2";
@@ -197,8 +196,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// ===============================================================================================================
 
     /// @dev Adds a new executor. - can be executed only by the onwer.
-    /// When adding a new executor 1 ETH is tranferred to allow the executor to pay for gas.
-    /// The balance of the owner is also checked and if funding is needed 1 ETH is transferred.
+    /// When adding a new executor 0.5 ETH is transferred to allow the executor to pay for gas.
+    /// The balance of the owner is also checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function addExecutor(address payable _executor)
     public
@@ -220,8 +219,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
         emit LogExecutorAdded(_executor);
     }
 
-    /// @dev Removes a new executor. - can be executed only by the onwer.
-    /// The balance of the owner is checked and if funding is needed 1 ETH is transferred.
+    /// @dev Removes a new executor. - can be executed only by the owner.
+    /// The balance of the owner is checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function removeExecutor(address payable _executor)
     public
@@ -245,8 +244,10 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// @dev Registers a new pull payment to the PumaPay Pull Payment Contract - The registration can be executed only
     /// by one of the executors of the PumaPay Pull Payment Contract
     /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
-    /// If the pull payment doesn't have a trial period, the first execution will take place.
-    /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
+    /// If the pull payment doesn't have a trial period, the first execution will take place.'
+    /// The pull payment is updated accordingly in terms of how many payments can happen, and when is the next payment date.
+    /// (For more details on the above check the 'executePullPayment' method.
+    /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     /// Emits 'LogPaymentRegistered' with customer address, beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
@@ -324,11 +325,19 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
         pullPayments[_addresses[0]][_addresses[1]].paymentIds[2] = _paymentDetails[2];
         pullPayments[_addresses[0]][_addresses[1]].cancelTimestamp = 0;
 
+        /// @dev In case of a free trial period the start timestamp of the payment
+        /// is the start timestamp that was signed by the customer + the trial period.
+        /// A payment is not needed during registration.
         if (_paymentDetails[3] == TYPE_PULL_PAYMENT_WITH_FREE_TRIAL) {
-            // nextPaymentTimestamp = startTimestamp + trialPeriod
+            /// nextPaymentTimestamp = startTimestamp + trialPeriod
             pullPayments[_addresses[0]][_addresses[1]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[3];
             pullPayments[_addresses[0]][_addresses[1]].lastPaymentTimestamp = 0;
 
+            /// @dev In case of a recurring payment with initial amount
+            /// the first payment of the 'initialPaymentAmountInCents' and 'initialConversionRate'
+            /// will happen on registration.
+            /// Once it happens, we set the next payment timestamp as
+            /// the start timestamp signed by the customer + trial period
         } else if (_paymentDetails[3] == TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL) {
             executePullPaymentOnRegistration(
                 [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], // 0 paymentID, 1 businessID, 2 uniqueReferenceID
@@ -336,30 +345,39 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
                 [_paymentAmounts[2], _paymentAmounts[0]] // 0 initialPaymentAmountInCents, 1 initialConversionRate
             );
             pullPayments[_addresses[0]][_addresses[1]].lastPaymentTimestamp = now;
-            //  nextPaymentTimestamp = startTimestamp + frequency
+            /// nextPaymentTimestamp = startTimestamp + frequency
             pullPayments[_addresses[0]][_addresses[1]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[0];
 
+            /// @dev In the case od a paid trial, the first payment happens
+            /// on registration using the 'initialPaymentAmountInCents' and 'initialConversionRate'.
+            /// When the first payment takes place we set the next payment timestamp
+            /// as the start timestamp that was signed by the customer + the trial period
         } else if (_paymentDetails[3] == TYPE_PULL_PAYMENT_WITH_PAID_TRIAL) {
             executePullPaymentOnRegistration(
-                [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], // paymentID , businessID , uniqueReferenceID
-                [_addresses[0], _addresses[2]], // 0 Customer Address, 1 Treasury Address
-                [_paymentAmounts[2], _paymentAmounts[0]] // 0 initialPaymentAmountInCents, 1 initialConversionRate
+                [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], /// paymentID , businessID , uniqueReferenceID
+                [_addresses[0], _addresses[2]], /// 0 Customer Address, 1 Treasury Address
+                [_paymentAmounts[2], _paymentAmounts[0]] /// 0 initialPaymentAmountInCents, 1 initialConversionRate
             );
             pullPayments[_addresses[0]][_addresses[1]].lastPaymentTimestamp = now;
-            //  nextPaymentTimestamp = startTimestamp + trialPeriod
+            ///  nextPaymentTimestamp = startTimestamp + trialPeriod
             pullPayments[_addresses[0]][_addresses[1]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[3];
 
+            /// @dev For the rest of the cases the first payment happens on registration
+            /// using the 'fiatAmountInCents' and 'initialConversionRate'.
+            /// When the first payment takes place, the number of payment is decreased by 1,
+            /// and the next payment timestamp is set to the start timestamp signed by the customer
+            /// + the frequency of the payment.
         } else {
             executePullPaymentOnRegistration(
-                [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], // paymentID , businessID , uniqueReferenceID
-                [_addresses[0], _addresses[2]], // Customer Address, Treasury Address
-                [_paymentAmounts[1], _paymentAmounts[0]] // fiatAmountInCents, initialConversionRate
+                [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], /// paymentID , businessID , uniqueReferenceID
+                [_addresses[0], _addresses[2]], /// Customer Address, Treasury Address
+                [_paymentAmounts[1], _paymentAmounts[0]] /// fiatAmountInCents, initialConversionRate
             );
 
             pullPayments[_addresses[0]][_addresses[1]].lastPaymentTimestamp = now;
-            //  nextPaymentTimestamp = startTimestamp + frequency
+            ///  nextPaymentTimestamp = startTimestamp + frequency
             pullPayments[_addresses[0]][_addresses[1]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[0];
-            //  numberOfPayments = numberOfPayments - 1
+            /// numberOfPayments = numberOfPayments - 1
             pullPayments[_addresses[0]][_addresses[1]].numberOfPayments = _paymentTimestamps[1] - 1;
         }
 
@@ -377,7 +395,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// and the PumaPay Pull Payment Contract checks that the beneficiary and the paymentID have
     /// been singed by the customer of the account.
     /// This method sets the cancellation of the pull payment in the pull payments array for this beneficiary specified.
-    /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
+    /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     /// Emits 'LogPaymentCancelled' with beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
@@ -424,17 +442,14 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// @dev Executes a pull payment for the msg.sender - The pull payment should exist and the payment request
     /// should be valid in terms of when it can be executed.
     /// Emits 'LogPullPaymentExecuted' with customer address, msg.sender as the beneficiary address and the paymentID.
-    /// Use Case 1: Single/Recurring Fixed Pull Payment (initialPaymentAmountInCents == 0 )
+    /// Use Case: Single/Recurring Fixed Pull Payment
     /// ------------------------------------------------
-    /// We calculate the amount in PMA using the rate for the currency specified in the pull payment
-    /// and the 'fiatAmountInCents' and we transfer from the customer account the amount in PMA.
+    /// We calculate the amount in PMA using the conversion rate specified when calling the method.
+    /// From the 'conversionRate' and the 'fiatAmountInCents' we calculate the amount of PMA that
+    /// the business need to receive in their treasuryAddress.
+    /// The smart contract transfers from the customer account to the treasury wallet the amount in PMA.
     /// After execution we set the last payment timestamp to NOW, the next payment timestamp is incremented by
     /// the frequency and the number of payments is decreased by 1.
-    /// Use Case 2: Recurring Fixed Pull Payment with initial fee (initialPaymentAmountInCents > 0)
-    /// ------------------------------------------------------------------------------------------------
-    /// We calculate the amount in PMA using the rate for the currency specified in the pull payment
-    /// and the 'initialPaymentAmountInCents' and we transfer from the customer account the amount in PMA.
-    /// After execution we set the last payment timestamp to NOW and the 'initialPaymentAmountInCents to ZERO.
     /// @param _customerAddress - address of the customer from which the msg.sender requires to pull funds.
     /// @param _paymentID - ID of the payment.
     /// @param _conversionRate - conversion rate with which the payment needs to take place
@@ -480,6 +495,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     ///                                      Internal Functions
     /// ===============================================================================================================
 
+    /// @dev The new version of the smart contract allows for the first execution to happen on registration,
+    /// unless the pull payment has free trial. Check the comments on 'registerPullPayment' method for more details.
     function executePullPaymentOnRegistration(
         bytes32[3] memory _paymentDetails, // 0 paymentID, 1 businessID, 2 uniqueReferenceID
         address[2] memory _addresses, // 0 customer Address, 1 treasury Address
@@ -617,7 +634,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     }
 
     /// @dev Checks if the address of an owner/executor needs to be funded.
-    /// The minimum amount the owner/executors should always have is 0.001 ETH
+    /// The minimum amount the owner/executors should always have is 0.15 ETH
     /// @param _address - address of owner/executors that the balance is checked against.
     /// @return bool - whether the address needs more ETH.
     function isFundingNeeded(address _address)

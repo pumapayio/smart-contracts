@@ -3,7 +3,6 @@ pragma solidity 0.5.8;
 import "./ownership/PayableOwnable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 
 /// @title PumaPay Pull Payment - Contract that facilitates our pull payment protocol
 /// @author PumaPay Dev Team - <developers@pumapay.io>
@@ -49,7 +48,7 @@ contract PumaPayPullPayment is PayableOwnable {
     uint256 constant internal OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
 
     uint256 constant internal ONE_ETHER = 1 ether;                               /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant internal FUNDING_AMOUNT = 1 ether;                          /// Amount to transfer to owner/executor
+    uint256 constant internal FUNDING_AMOUNT = 0.5 ether;                          /// Amount to transfer to owner/executor
     uint256 constant internal MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor
 
     bytes32 constant internal EMPTY_BYTES32 = "";
@@ -172,8 +171,8 @@ contract PumaPayPullPayment is PayableOwnable {
     /// ===============================================================================================================
 
     /// @dev Adds a new executor. - can be executed only by the onwer.
-    /// When adding a new executor 1 ETH is tranferred to allow the executor to pay for gas.
-    /// The balance of the owner is also checked and if funding is needed 1 ETH is transferred.
+    /// When adding a new executor 0.5 ETH is tranferred to allow the executor to pay for gas.
+    /// The balance of the owner is also checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
 
     function addExecutor(address payable _executor)
@@ -196,8 +195,8 @@ contract PumaPayPullPayment is PayableOwnable {
         emit LogExecutorAdded(_executor);
     }
 
-    /// @dev Removes a new executor. - can be executed only by the onwer.
-    /// The balance of the owner is checked and if funding is needed 1 ETH is transferred.
+    /// @dev Removes a new executor. - can be executed only by the owner.
+    /// The balance of the owner is checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function removeExecutor(address payable _executor)
     public
@@ -216,7 +215,7 @@ contract PumaPayPullPayment is PayableOwnable {
 
     /// @dev Sets the exchange rate for a currency. - can be executed only by the onwer.
     /// Emits 'LogSetConversionRate' with the currency and the updated rate.
-    /// The balance of the owner is checked and if funding is needed 1 ETH is transferred.
+    /// The balance of the owner is checked and if funding is needed 0.5 ETH is transferred.
     /// @param _currency - address of the executor which cannot be zero address
     /// @param _rate - address of the executor which cannot be zero address
     function setRate(string memory _currency, uint256 _rate)
@@ -242,7 +241,7 @@ contract PumaPayPullPayment is PayableOwnable {
     /// @dev Registers a new pull payment to the PumaPay Pull Payment Contract - The registration can be executed only
     /// by one of the executors of the PumaPay Pull Payment Contract
     /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
-    /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
+    /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     /// Emits 'LogPaymentRegistered' with customer address, beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
@@ -326,7 +325,7 @@ contract PumaPayPullPayment is PayableOwnable {
     /// and the PumaPay Pull Payment Contract checks that the beneficiary and the paymentID have
     /// been singed by the customer of the account.
     /// This method sets the cancellation of the pull payment in the pull payments array for this beneficiary specified.
-    /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
+    /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     /// Emits 'LogPaymentCancelled' with beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
@@ -547,7 +546,7 @@ contract PumaPayPullPayment is PayableOwnable {
     }
 
     /// @dev Checks if the address of an owner/executor needs to be funded.
-    /// The minimum amount the owner/executors should always have is 0.001 ETH
+    /// The minimum amount the owner/executors should always have is 0.15 ETH
     /// @param _address - address of owner/executors that the balance is checked against.
     /// @return bool - whether the address needs more ETH.
     function isFundingNeeded(address _address)
