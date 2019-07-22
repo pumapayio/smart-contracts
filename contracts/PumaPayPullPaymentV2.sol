@@ -1,7 +1,6 @@
 pragma solidity 0.5.8;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./ownership/PayableOwnable.sol";
 
@@ -20,6 +19,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
     event LogExecutorAdded(address executor);
     event LogExecutorRemoved(address executor);
+
+    event LogSmartContractActorFunded(string actorRole, address actor, uint256 timestamp);
 
     event LogPaymentRegistered(
         address customerAddress,
@@ -47,20 +48,22 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
-    uint256 constant private DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256
-    uint256 constant private FIAT_TO_CENT_FIXER = 100;    /// Fiat currencies have 100 cents in 1 basic monetary unit.
-    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20; /// 1e^20 - Prevent numeric overflows
+    uint256 constant internal DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256
+    uint256 constant internal FIAT_TO_CENT_FIXER = 100;    /// Fiat currencies have 100 cents in 1 basic monetary unit.
+    uint256 constant internal OVERFLOW_LIMITER_NUMBER = 10 ** 20; /// 1e^20 - Prevent numeric overflows
 
-    uint256 constant private ONE_ETHER = 1 ether;         /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant private FUNDING_AMOUNT = 1 ether;  /// Amount to transfer to owner/executor
-    uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor
+    uint256 constant internal ONE_ETHER = 1 ether;         /// PumaPay token has 18 decimals - same as one ETHER
+    uint256 constant internal FUNDING_AMOUNT = 0.5 ether;  /// Amount to transfer to owner/executor
+    uint256 constant internal MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether; /// min amount of ETH for owner/executor
 
-    bytes32 constant private TYPE_SINGLE_PULL_PAYMENT = "2";
-    bytes32 constant private TYPE_RECURRING_PULL_PAYMENT = "3";
-    bytes32 constant private TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL = "4";
-    bytes32 constant private TYPE_PULL_PAYMENT_WITH_FREE_TRIAL = "5";
-    bytes32 constant private TYPE_PULL_PAYMENT_WITH_PAID_TRIAL = "6";
-    bytes32 constant private TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
+    bytes32 constant internal TYPE_SINGLE_PULL_PAYMENT = "2";
+    bytes32 constant internal TYPE_RECURRING_PULL_PAYMENT = "3";
+    bytes32 constant internal TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL = "4";
+    bytes32 constant internal TYPE_PULL_PAYMENT_WITH_FREE_TRIAL = "5";
+    bytes32 constant internal TYPE_PULL_PAYMENT_WITH_PAID_TRIAL = "6";
+    bytes32 constant internal TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
+
+    bytes32 constant internal EMPTY_BYTES32 = "";
 
     /// ===============================================================================================================
     ///                                      Members
@@ -144,7 +147,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     modifier isValidDeletionRequest(bytes32 _paymentID, address _customerAddress, address _pullPaymentExecutor) {
         require(_customerAddress != address(0), "Invalid deletion request - Client address is ZERO_ADDRESS.");
         require(_pullPaymentExecutor != address(0), "Invalid deletion request - Beneficiary address is ZERO_ADDRESS.");
-        require(_paymentID.length != 0, "Invalid deletion request - Payment ID is empty.");
+        require(_paymentID != EMPTY_BYTES32, "Invalid deletion request - Payment ID is empty.");
         _;
     }
 
@@ -160,7 +163,6 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     }
 
     modifier isValidPaymentType(bytes32 _paymentType) {
-        require(_paymentType.length > 0, "Payment Type is empty.");
         require(
             (
             _paymentType == TYPE_SINGLE_PULL_PAYMENT ||
@@ -194,8 +196,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// ===============================================================================================================
 
     /// @dev Adds a new executor. - can be executed only by the onwer.
-    /// When adding a new executor 1 ETH is tranferred to allow the executor to pay for gas.
-    /// The balance of the owner is also checked and if funding is needed 1 ETH is transferred.
+    /// When adding a new executor 0.5 ETH is transferred to allow the executor to pay for gas.
+    /// The balance of the owner is also checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function addExecutor(address payable _executor)
     public
@@ -203,18 +205,22 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     isValidAddress(_executor)
     executorDoesNotExists(_executor)
     {
-        _executor.transfer(FUNDING_AMOUNT);
         executors[_executor] = true;
+        _executor.transfer(FUNDING_AMOUNT);
+
+        emit LogSmartContractActorFunded("executor", _executor, now);
 
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("owner", owner, now);
         }
 
         emit LogExecutorAdded(_executor);
     }
 
     /// @dev Removes a new executor. - can be executed only by the onwer.
-    /// The balance of the owner is checked and if funding is needed 1 ETH is transferred.
+    /// The balance of the owner is checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function removeExecutor(address payable _executor)
     public
@@ -225,6 +231,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
         executors[_executor] = false;
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("owner", owner, now);
         }
         emit LogExecutorRemoved(_executor);
     }
@@ -237,7 +245,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// by one of the executors of the PumaPay Pull Payment Contract
     /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
     /// If the pull payment doesn't have a trial period, the first execution will take place.
-    /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
+    /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     /// Emits 'LogPaymentRegistered' with customer address, beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
@@ -261,9 +269,11 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     isExecutor()
     isValidPaymentType(_paymentDetails[3])
     {
-        require(_paymentDetails[0].length > 0, "Payment ID is empty.");
-        require(_paymentDetails[1].length > 0, "Business ID is empty.");
-        require(_paymentDetails[2].length > 0, "Unique Reference ID is empty.");
+        require(pullPayments[_addresses[0]][_addresses[1]].paymentIds[0] == EMPTY_BYTES32, "Pull Payment already exists.");
+
+        require(_paymentDetails[0] != EMPTY_BYTES32, "Payment ID is empty.");
+        require(_paymentDetails[1] != EMPTY_BYTES32, "Business ID is empty.");
+        require(_paymentDetails[2] != EMPTY_BYTES32, "Unique Reference ID is empty.");
 
         require(_addresses[0] != address(0), "Customer Address is ZERO_ADDRESS.");
         require(_addresses[1] != address(0), "Beneficiary Address is ZERO_ADDRESS.");
@@ -283,7 +293,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
         require(_paymentTimestamps[2] < OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
         require(_paymentTimestamps[3] < OVERFLOW_LIMITER_NUMBER, "Payment trial period is higher thant the overflow limit.");
 
-        require(bytes(_currency).length > 0, "Currency is empty");
+        require(bytes(_currency) != EMPTY_BYTES32, "Currency is empty");
 
         pullPayments[_addresses[0]][_addresses[1]].paymentIds[0] = _paymentDetails[0];
         pullPayments[_addresses[0]][_addresses[1]].paymentType = _paymentDetails[3];
@@ -356,6 +366,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
         if (isFundingNeeded(msg.sender)) {
             msg.sender.transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("executor", msg.sender, now);
         }
 
         emit LogPaymentRegistered(_addresses[0], _paymentDetails[0], _paymentDetails[1], _paymentDetails[2]);
@@ -366,7 +378,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// and the PumaPay Pull Payment Contract checks that the beneficiary and the paymentID have
     /// been singed by the customer of the account.
     /// This method sets the cancellation of the pull payment in the pull payments array for this beneficiary specified.
-    /// The balance of the executor (msg.sender) is checked and if funding is needed 1 ETH is transferred.
+    /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     /// Emits 'LogPaymentCancelled' with beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
@@ -394,6 +406,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
         if (isFundingNeeded(msg.sender)) {
             msg.sender.transfer(FUNDING_AMOUNT);
+
+            emit LogSmartContractActorFunded("executor", msg.sender, now);
         }
 
         emit LogPaymentCancelled(
@@ -508,6 +522,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     validAmount(_fiatAmountInCents)
     validAmount(_conversionRate)
     returns (uint256) {
+
         return ONE_ETHER.mul(DECIMAL_FIXER).mul(_fiatAmountInCents).div(_conversionRate).div(FIAT_TO_CENT_FIXER);
     }
 
@@ -540,6 +555,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
                     _pullPayment.paymentType,
                     _pullPayment.treasuryAddress,
                     _pullPayment.currency,
+                    _pullPayment.initialConversionRate,
                     _pullPayment.initialPaymentAmountInCents,
                     _pullPayment.fiatAmountInCents,
                     _pullPayment.frequency,
@@ -594,7 +610,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     view
     returns (bool) {
         return (
-        bytes(pullPayments[_customerAddress][_pullPaymentExecutor].currency).length > 0 &&
+        bytes(pullPayments[_customerAddress][_pullPaymentExecutor].currency) != EMPTY_BYTES32 &&
         pullPayments[_customerAddress][_pullPaymentExecutor].fiatAmountInCents > 0 &&
         pullPayments[_customerAddress][_pullPaymentExecutor].frequency > 0 &&
         pullPayments[_customerAddress][_pullPaymentExecutor].startTimestamp > 0 &&
@@ -604,7 +620,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     }
 
     /// @dev Checks if the address of an owner/executor needs to be funded.
-    /// The minimum amount the owner/executors should always have is 0.001 ETH
+    /// The minimum amount the owner/executors should always have is 0.15 ETH
     /// @param _address - address of owner/executors that the balance is checked against.
     /// @return bool - whether the address needs more ETH.
     function isFundingNeeded(address _address)

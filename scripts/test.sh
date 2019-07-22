@@ -49,5 +49,5 @@ if [ "$SOLIDITY_COVERAGE" = true ]; then
     cat coverage/lcov.info | node_modules/.bin/coveralls
   fi
 else
-  node $NODE_DEBUG_OPTION node_modules/.bin/truffle test "$@" --network ganache
+  node $NODE_DEBUG_OPTION node_modules/.bin/truffle test test/paymentPlugins/SplitPayment.test.js --network ganache
 fi

@@ -27,5 +27,10 @@ module.exports = {
     useColors: true,
     slow: 30000,
     bail: true
+  },
+  compilers: {
+    solc: {
+      version: '0.5.8'
+    }
   }
 };
