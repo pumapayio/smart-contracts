@@ -378,12 +378,11 @@ contract PumaPayPullPayment is PayableOwnable {
     isValidPullPaymentExecutionRequest(_customer, msg.sender, _paymentID)
     {
         uint256 amountInPMA;
+        uint256 initialAmountInCents = pullPayments[_customer][msg.sender].initialPaymentAmountInCents;
 
-        if (pullPayments[_customer][msg.sender].initialPaymentAmountInCents > 0) {
-            amountInPMA = calculatePMAFromFiat(
-                pullPayments[_customer][msg.sender].initialPaymentAmountInCents,
-                pullPayments[_customer][msg.sender].currency
-            );
+        if (initialAmountInCents > 0) {
+            amountInPMA = calculatePMAFromFiat(initialAmountInCents, pullPayments[_customer][msg.sender].currency);
+
             pullPayments[_customer][msg.sender].initialPaymentAmountInCents = 0;
         } else {
             amountInPMA = calculatePMAFromFiat(
