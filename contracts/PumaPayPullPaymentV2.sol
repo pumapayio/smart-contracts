@@ -162,7 +162,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
     modifier validAmount(uint256 _amount) {
         require(_amount > 0, "Invalid amount - Must be higher than zero");
-        require(_amount < OVERFLOW_LIMITER_NUMBER, "Invalid amount - Must be lower than the overflow limit.");
+        require(_amount <= OVERFLOW_LIMITER_NUMBER, "Invalid amount - Must be lower than the overflow limit.");
         _;
     }
 
@@ -285,19 +285,19 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
         require(_paymentAmounts[0] > 0, "Initial conversion rate is zero.");
         require(_paymentAmounts[1] > 0, "Payment amount in fiat is zero.");
-        require(_paymentAmounts[2] >= 0, "Initial opayment amount in fiat is less than zero.");
+        require(_paymentAmounts[2] >= 0, "Initial payment amount in fiat is less than zero.");
         require(_paymentTimestamps[0] > 0, "Payment frequency is zero.");
         require(_paymentTimestamps[1] > 0, "Payment number of payments is zero.");
         require(_paymentTimestamps[2] > 0, "Payment start time is zero.");
         require(_paymentTimestamps[3] >= 0, "Payment trial period is less than zero.");
 
-        require(_paymentAmounts[0] < OVERFLOW_LIMITER_NUMBER, "Initial conversion rate is higher thant the overflow limit.");
-        require(_paymentAmounts[1] < OVERFLOW_LIMITER_NUMBER, "Payment amount in fiat is higher thant the overflow limit.");
-        require(_paymentAmounts[2] < OVERFLOW_LIMITER_NUMBER, "Payment initial amount in fiat is higher thant the overflow limit.");
-        require(_paymentTimestamps[0] < OVERFLOW_LIMITER_NUMBER, "Payment frequency is higher thant the overflow limit.");
-        require(_paymentTimestamps[1] < OVERFLOW_LIMITER_NUMBER, "Payment number of payments is higher thant the overflow limit.");
-        require(_paymentTimestamps[2] < OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
-        require(_paymentTimestamps[3] < OVERFLOW_LIMITER_NUMBER, "Payment trial period is higher thant the overflow limit.");
+        require(_paymentAmounts[0] <= OVERFLOW_LIMITER_NUMBER, "Initial conversion rate is higher thant the overflow limit.");
+        require(_paymentAmounts[1] <= OVERFLOW_LIMITER_NUMBER, "Payment amount in fiat is higher thant the overflow limit.");
+        require(_paymentAmounts[2] <= OVERFLOW_LIMITER_NUMBER, "Payment initial amount in fiat is higher thant the overflow limit.");
+        require(_paymentTimestamps[0] <= OVERFLOW_LIMITER_NUMBER, "Payment frequency is higher thant the overflow limit.");
+        require(_paymentTimestamps[1] <= OVERFLOW_LIMITER_NUMBER, "Payment number of payments is higher thant the overflow limit.");
+        require(_paymentTimestamps[2] <= OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
+        require(_paymentTimestamps[3] <= OVERFLOW_LIMITER_NUMBER, "Payment trial period is higher thant the overflow limit.");
 
         require(bytes(_currency).length > 0, "Currency is empty");
 
@@ -552,7 +552,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     validAmount(_fiatAmountInCents)
     validAmount(_conversionRate)
     returns (uint256) {
-        return RATE_CALCULATION_NUMBER.mul(_fiatAmountInCents).div(conversionRates[_currency]);
+        return RATE_CALCULATION_NUMBER.mul(_fiatAmountInCents).div(_conversionRate);
     }
 
 

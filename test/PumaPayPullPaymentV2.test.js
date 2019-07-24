@@ -38,6 +38,15 @@ const CLIENT_THREE_PRIVATE_KEY = '0x7f201ee20596c003b979ba39018b08cd7920abbc04a9
 
 const GAS_PRICE = 1000000000;
 
+const transferEthersToSmartContract = async (ethers, fromAccount, smartContract) => {
+  await smartContract.sendTransaction(
+    {
+      from: fromAccount,
+      value: ethers * ONE_ETHER
+    }
+  );
+};
+
 contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
   const deployerAccount = accounts[ 0 ];
   const owner = accounts[ 1 ];
@@ -82,7 +91,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     fiatAmountInCents: 200, // 2.00 USD in cents
     frequency: 2 * DAY,
     numberOfPayments: 10,
-    startTimestamp: Math.floor(Date.now() / 1000) + DAY,
+    startTimestamp: Math.floor(Date.now() / 1000),
     treasuryAddress: treasuryAddress,
     trialPeriod: 0
   };
@@ -169,15 +178,6 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       from: deployerAccount
     });
   });
-
-  const transferEthersToSmartContract = async (ethers, fromAccount, smartContract) => {
-    await smartContract.sendTransaction(
-      {
-        from: fromAccount,
-        value: ethers * ONE_ETHER
-      }
-    );
-  };
 
   describe('Deploying', async () => {
     it('PumaPay Pull Payment owner should be the address that was specified on contract deployment', async () => {
@@ -2127,7 +2127,100 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
   });
 
-  describe('Overflow checks', async () => {
+  describe('Overflow checks for pull payment execution', async () => {
+    beforeEach('Transfer ETH to smart contract', async () => {
+      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+    });
 
+    beforeEach('add an executor', async () => {
+      await pumaPayPullPayment.addExecutor(executorOne, {
+        from: owner
+      });
+    });
+
+    beforeEach('Approve pull payment smart contract with 90 Billion Billions of PMA', async () => {
+      await token.approve(pumaPayPullPayment.address, web3.utils.toWei(( MINTED_TOKENS + '000000000000000000' )), {
+        from: clientTwo
+      });
+    });
+    beforeEach('Issue tokens to client', async () => {
+      const tokens = MINTED_TOKENS + '0000000';
+      await token.mint(clientTwo, tokens, {
+        from: deployerAccount
+      });
+    });
+
+    it('should execute a pull payment of 1 BILLION FIAT with a conversion rate of 1 PMA = 100k EUR', async () => {
+      recurringPullPayment.fiatAmountInCents = 100000000000; // 1 billion in FIAT cents
+      recurringPullPayment.initialConversionRate = DECIMAL_FIXER + '00000'; // 1 PMA = 100k EUR // 10^15
+      const signature = await calcSignedMessageForRegistrationV2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
+        [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
+        recurringPullPayment.currency,
+        {
+          from: executorOne
+        });
+
+      const rate = DECIMAL_FIXER + '00000'; // 1 PMA = 100k EUR // 10^15
+
+      await timeTravel(recurringPullPayment.frequency);
+      await pumaPayPullPayment.executePullPayment(
+        recurringPullPayment.client,
+        recurringPullPayment.paymentID,
+        rate,
+        {
+          from: recurringPullPayment.pullPaymentExecutorAddress
+        });
+
+      const balanceOfTreasuryAfter = await token.balanceOf(treasuryAddress);
+      // 1 PMA = 100k EUR ==> 1 Billion EUR = 10000 PMA
+      // On execution we have two payments that have happened already.
+      // One on registration and another one on execution.
+      // Therefore, the actual PMA amount is 20000
+      Number(balanceOfTreasuryAfter.toString()).should.be.equal(20000 * ONE_ETHER);
+    });
+
+    it('should execute a pull payment of 100k FIAT with a conversion rate of 1 PMA = 0.000001 FIAT', async () => {
+      recurringPullPayment.fiatAmountInCents = 10000000; // 100k FIAT in cents
+      recurringPullPayment.initialConversionRate = '100000'; // 1 PMA = 0.00001 FIAT // 0.00001 * DECIMAL_FIXER
+      const signature = await calcSignedMessageForRegistrationV2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
+        [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
+        recurringPullPayment.currency,
+        {
+          from: executorOne
+        });
+
+      const rate = '100000'; // 1 PMA = 0.00001 FIAT // 0.00001 * DECIMAL_FIXER
+
+      await timeTravel(recurringPullPayment.frequency);
+      await pumaPayPullPayment.executePullPayment(
+        recurringPullPayment.client,
+        recurringPullPayment.paymentID,
+        rate,
+        {
+          from: recurringPullPayment.pullPaymentExecutorAddress
+        });
+
+      const balanceOfTreasuryAfter = await token.balanceOf(treasuryAddress);
+      // 1 PMA = 0.00001 EUR ==> 1 EUR = 100000 PMA ==> 100k EUR = 10000000000 PMA
+      Number(balanceOfTreasuryAfter.toString()).should.be.equal(20000000000 * ONE_ETHER);
+    });
   });
 });

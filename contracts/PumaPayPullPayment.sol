@@ -281,17 +281,20 @@ contract PumaPayPullPayment is PayableOwnable {
         require(_ids[1] != EMPTY_BYTES32, "Business ID is empty.");
         require(bytes(_currency).length > 0, "Currency is empty.");
         require(bytes(_uniqueReferenceID).length > 0, "Unique Reference ID is empty.");
+
         require(_addresses[0] != address(0), "Customer Address is ZERO_ADDRESS.");
         require(_addresses[1] != address(0), "Beneficiary Address is ZERO_ADDRESS.");
         require(_addresses[2] != address(0), "Treasury Address is ZERO_ADDRESS.");
+
         require(_fiatAmountInCents > 0, "Payment amount in fiat is zero.");
-        require(_fiatAmountInCents <= OVERFLOW_LIMITER_NUMBER, "Payment amount is higher thant the overflow limit.");
         require(_frequency > 0, "Payment frequency is zero.");
-        require(_frequency <= OVERFLOW_LIMITER_NUMBER, "Payment frequency is higher thant the overflow limit.");
         require(_numberOfPayments > 0, "Payment number of payments is zero.");
-        require(_numberOfPayments <= OVERFLOW_LIMITER_NUMBER, "Payment number of payments is higher thant the overflow limit.");
         require(_startTimestamp > 0, "Payment start time is zero.");
-        require(_startTimestamp <= OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
+
+        require(_fiatAmountInCents <= OVERFLOW_LIMITER_NUMBER, "Payment amount is higher than the overflow limit.");
+        require(_frequency <= OVERFLOW_LIMITER_NUMBER, "Payment frequency is higher than the overflow limit.");
+        require(_numberOfPayments <= OVERFLOW_LIMITER_NUMBER, "Payment number of payments is higher than the overflow limit.");
+        require(_startTimestamp <= OVERFLOW_LIMITER_NUMBER, "Payment start time is higher than the overflow limit.");
 
         pullPayments[_addresses[0]][_addresses[1]].currency = _currency;
         pullPayments[_addresses[0]][_addresses[1]].initialPaymentAmountInCents = _initialPaymentAmountInCents;
