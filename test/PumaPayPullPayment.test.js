@@ -6,7 +6,7 @@ const {
   calcSignedMessageForDeletion,
   getVRS
 } = require('./helpers/signatureCalculator');
-const PumaPayToken = artifacts.require('ERC20Mintable');
+const PumaPayToken = artifacts.require('MockMintableToken');
 
 const PumaPayPullPayment = artifacts.require('PumaPayPullPayment');
 const BigNumber = web3.BigNumber;
@@ -24,13 +24,25 @@ const YEAR = 365 * DAY;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const ONE_ETHER = web3.utils.toWei('1', 'ether');
-const MINTED_TOKENS = web3.utils.toWei('1000000000', 'ether'); // 1 Billion PMA
-const EUR_EXCHANGE_RATE = 100000000; // 0.01 * 1^10
-const USD_EXCHANGE_RATE = 200000000; // 0.02 * 1^10
+const FUNDING_AMOUNT = web3.utils.toWei('0.5', 'ether');
+const MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15;
+const DECIMAL_FIXER = 10 ** 10;
+const MINTED_TOKENS = web3.utils.toWei('90000000000', 'ether'); // 90 Billion PMA
+const EUR_EXCHANGE_RATE = 0.01 * DECIMAL_FIXER; // 1 PMA = 0.01 EUR
+const USD_EXCHANGE_RATE = 0.02 * DECIMAL_FIXER; // 1 PMA = 0.02 USD
 
 const CLIENT_ONE_PRIVATE_KEY = '0x581a2b62e840bae3e56685c5ede97d0cb1f252fa7937026dcac489074b01fc29';
 const CLIENT_TWO_PRIVATE_KEY = '0xc5459c6743cd4fe5a89c3fc994c2bdfd5dbac6ecd750f642bd2e272d9fa0852d';
 const CLIENT_THREE_PRIVATE_KEY = '0x7f201ee20596c003b979ba39018b08cd7920abbc04a9d1bb984aa8be421db541';
+
+const transferEthersToSmartContract = async (ethers, fromAccount, smartContract) => {
+  await smartContract.sendTransaction(
+    {
+      from: fromAccount,
+      value: ethers * ONE_ETHER
+    }
+  );
+};
 
 contract('PumaPay Pull Payment Contract', async (accounts) => {
   const deployerAccount = accounts[ 0 ];
@@ -48,7 +60,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
   let singlePullPayment = {
     paymentID: web3.utils.padRight(web3.utils.fromAscii('paymentID_1'), 64),
     businessID: web3.utils.padRight(web3.utils.fromAscii('businessID_1'), 64),
-    uniqueReferenceID: 'uniqueReferenceID_1',// web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_1'), 64),
+    uniqueReferenceID: 'uniqueReferenceID_1',
     client: clientOne,
     pullPaymentExecutorAddress: paymentExecutorOne,
     currency: 'EUR',
@@ -63,7 +75,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
   let recurringPullPayment = {
     paymentID: web3.utils.padRight(web3.utils.fromAscii('paymentID_2'), 64),
     businessID: web3.utils.padRight(web3.utils.fromAscii('businessID_2'), 64),
-    uniqueReferenceID: 'uniqueReferenceID_2',// web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_2'), 64),
+    uniqueReferenceID: 'uniqueReferenceID_2',
     client: clientTwo,
     pullPaymentExecutorAddress: paymentExecutorTwo,
     currency: 'USD',
@@ -78,7 +90,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
   let recurringPullPaymentWithInitialAmount = {
     paymentID: web3.utils.padRight(web3.utils.fromAscii('paymentID_3'), 64),
     businessID: web3.utils.padRight(web3.utils.fromAscii('businessID_3'), 64),
-    uniqueReferenceID: 'uniqueReferenceID_3',// web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_3'), 64),
+    uniqueReferenceID: 'uniqueReferenceID_3',
     client: clientThree,
     pullPaymentExecutorAddress: paymentExecutorThree,
     currency: 'USD',
@@ -129,15 +141,6 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
     });
   });
 
-  const transferEthersToSmartContract = async (ethers, fromAccount, smartContract) => {
-    await smartContract.sendTransaction(
-      {
-        from: fromAccount,
-        value: ethers * ONE_ETHER
-      }
-    );
-  };
-
   describe('Deploying', async () => {
     it('PumaPay Pull Payment owner should be the address that was specified on contract deployment', async () => {
       const accountOwner = await pumaPayPullPayment.owner();
@@ -181,7 +184,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
       const expectedBalance = web3.utils.fromWei(String(executorBalanceAfter), 'ether') - web3.utils.fromWei(String(executorBalanceBefore), 'ether');
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(String(expectedBalance), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
     });
 
     it('should revert when the executor is a ZERO address', async () => {
@@ -1066,14 +1069,14 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
         value: 5 * ONE_ETHER
       });
     });
-    it('should transfer ETH to the owner when its balance is lower than 0.01 ETH and set the rate', async () => {
+    it('should transfer ETH to the owner when its balance is lower than 0.15 ETH and set the rate', async () => {
       const ownerBalance = await web3.eth.getBalance(owner);
       const ownerBalanceETH = web3.utils.fromWei(String(ownerBalance), 'ether');
 
       await web3.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: web3.utils.toWei(String(ownerBalanceETH - 0.01))
+        value: web3.utils.toWei(String(ownerBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const ownerBalanceBefore = await web3.eth.getBalance(owner);
@@ -1083,14 +1086,10 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       const txFee = Number(transaction.receipt.gasUsed) * gasPrice;
       const ownerBalanceAfter = await web3.eth.getBalance(owner);
       const euroRate = await pumaPayPullPayment.getRate('EUR');
+      const expectedBalance = web3.utils.toBN(ownerBalanceAfter).sub(web3.utils.toBN(ownerBalanceBefore)).add(web3.utils.toBN(txFee));
 
       String(euroRate).should.be.equal(String(web3.utils.toBN(EUR_EXCHANGE_RATE)));
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(ownerBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(ownerBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
-
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
     });
   });
@@ -1107,15 +1106,16 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the owner when its balance is lower than 0.01 ETH', async () => {
+    it('should transfer ETH to the owner when its balance is lower than 0.15 ETH', async () => {
       const ownerBalance = await web3.eth.getBalance(owner);
       const ownerBalanceETH = web3.utils.fromWei(String(ownerBalance), 'ether');
 
       await web3.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: web3.utils.toWei(String(ownerBalanceETH - 0.01))
+        value: web3.utils.toWei(String(ownerBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
+
       const ownerBalanceBefore = await web3.eth.getBalance(owner);
       const transaction = await pumaPayPullPayment.addExecutor(executorOne, {
         from: owner
@@ -1125,13 +1125,10 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       const ownerBalanceAfter = await web3.eth.getBalance(owner);
       const executor = await pumaPayPullPayment.executors(executorOne);
 
-      assert.equal(executor, true);
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(ownerBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(ownerBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
+      const expectedBalance = web3.utils.toBN(ownerBalanceAfter).sub(web3.utils.toBN(ownerBalanceBefore)).add(web3.utils.toBN(txFee));
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(executor, true);
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
     });
   });
 
@@ -1152,14 +1149,14 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the owner when its balance is lower than 0.01 ETH', async () => {
+    it('should transfer ETH to the owner when its balance is lower than 0.15 ETH', async () => {
       const ownerBalance = await web3.eth.getBalance(owner);
       const ownerBalanceETH = web3.utils.fromWei(String(ownerBalance), 'ether');
 
       await web3.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: web3.utils.toWei(String(ownerBalanceETH - 0.01))
+        value: web3.utils.toWei(String(ownerBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const ownerBalanceBefore = await web3.eth.getBalance(owner);
@@ -1170,14 +1167,10 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
 
       const ownerBalanceAfter = await web3.eth.getBalance(owner);
       const executor = await pumaPayPullPayment.executors(executorOne);
+      const expectedBalance = web3.utils.toBN(ownerBalanceAfter).sub(web3.utils.toBN(ownerBalanceBefore)).add(web3.utils.toBN(txFee));
 
       assert.equal(executor, false);
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(ownerBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(ownerBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
-
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
     });
   });
 
@@ -1198,13 +1191,13 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the executor when its balance is lower than 0.01 ETH and register a pull payment', async () => {
+    it('should transfer ETH to the executor when its balance is lower than 0.15 ETH and register a pull payment', async () => {
       const executorBalance = await web3.eth.getBalance(executorOne);
       const executorBalanceETH = web3.utils.fromWei(String(executorBalance), 'ether');
       await web3.eth.sendTransaction({
         from: executorOne,
         to: deployerAccount,
-        value: web3.utils.toWei(String(executorBalanceETH - 0.01))
+        value: web3.utils.toWei(String(executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
@@ -1233,11 +1226,9 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
       const activePaymentInArray = await pumaPayPullPayment.pullPayments(clientOne, facilitatorOne);
 
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(executorBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(executorBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      const expectedBalance = web3.utils.toBN(executorBalanceAfter).sub(web3.utils.toBN(executorBalanceBefore)).add(web3.utils.toBN(txFee));
+
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
       activePaymentInArray[ 0 ].should.be.equal(singlePullPayment.paymentID); // PAYMENT ID
       activePaymentInArray[ 1 ].should.be.equal(singlePullPayment.businessID); // BUSINESS ID
@@ -1299,13 +1290,13 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the executor when its balance is lower than 0.01 ETH', async () => {
+    it('should transfer ETH to the executor when its balance is lower than 0.15 ETH', async () => {
       const executorBalance = await web3.eth.getBalance(executorOne);
       const executorBalanceETH = web3.utils.fromWei(String(executorBalance), 'ether');
       await web3.eth.sendTransaction({
         from: executorOne,
         to: deployerAccount,
-        value: web3.utils.toWei(String(executorBalanceETH - 0.01))
+        value: web3.utils.toWei(String(executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
@@ -1327,13 +1318,172 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
       const ethDate = await currentBlockTime();
 
       const activePaymentInArray = await pumaPayPullPayment.pullPayments(clientOne, facilitatorOne);
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(executorBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(executorBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
 
+      const expectedBalance = web3.utils.toBN(executorBalanceAfter).sub(web3.utils.toBN(executorBalanceBefore)).add(web3.utils.toBN(txFee));
+
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
       String(activePaymentInArray[ 11 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // CANCEL PAYMENT TS
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+    });
+  });
+});
+
+contract('PumaPay Pull Payment Contract For Overflow / Underflow checks', async (accounts) => {
+  const deployerAccount = accounts[ 0 ];
+  const owner = accounts[ 1 ];
+  const executorOne = accounts[ 2 ];
+  const facilitatorOne = accounts[ 4 ];
+  const clientOne = accounts[ 7 ];
+  const clientTwo = accounts[ 8 ];
+  const clientThree = accounts[ 9 ];
+  const treasuryAddress = accounts[ 10 ];
+
+  const gasPrice = 1000000000;
+
+  let singlePullPayment = {
+    paymentID: web3.utils.padRight(web3.utils.fromAscii('paymentID_1'), 64),
+    businessID: web3.utils.padRight(web3.utils.fromAscii('businessID_1'), 64),
+    uniqueReferenceID: web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_1'), 64),
+    client: clientOne,
+    pullPaymentExecutorAddress: facilitatorOne,
+    currency: 'EUR',
+    initialPaymentAmountInCents: 0,
+    fiatAmountInCents: 100000000000, // 1 billion in EUR cents
+    frequency: 1,
+    numberOfPayments: 1,
+    startTimestamp: Math.floor(Date.now() / 1000) + DAY,
+    treasuryAddress: treasuryAddress
+  };
+
+  let token;
+  let pumaPayPullPayment;
+
+  beforeEach('Deploying new PumaPayToken', async () => {
+    token = await PumaPayToken.new({
+      from: deployerAccount
+    });
+  });
+
+  beforeEach('Deploying new PumaPay Pull Payment', async () => {
+    pumaPayPullPayment = await PumaPayPullPayment
+      .new(token.address, {
+        from: owner
+      });
+  });
+
+  beforeEach('Issue tokens to the clients', async () => {
+    const tokens = MINTED_TOKENS;
+    await token.mint(clientOne, tokens, {
+      from: deployerAccount
+    });
+    await token.mint(clientTwo, tokens, {
+      from: deployerAccount
+    });
+    await token.mint(clientThree, tokens, {
+      from: deployerAccount
+    });
+  });
+
+  beforeEach('Transfer ETH to smart contract', async () => {
+    await transferEthersToSmartContract(3, deployerAccount, pumaPayPullPayment);
+  });
+
+  beforeEach('Add executor ETH to smart contract', async () => {
+    await pumaPayPullPayment.addExecutor(executorOne, {
+      from: owner
+    });
+  });
+
+  describe('Overflow checks for setting the rate', async () => {
+    it('should update the rate with a very high number // 1 PMA = 1 Trillion FIAT', async () => {
+      const rate = DECIMAL_FIXER + '0000000000'; // 1 PMA = 1 Trillion EUR // 10^20
+      await pumaPayPullPayment.setRate('EUR', rate, {
+        from: owner
+      });
+
+      const contractRate = await pumaPayPullPayment.getRate('EUR');
+
+      String(contractRate).should.be.equal(String(web3.utils.toBN(rate)));
+    });
+  });
+
+  describe('Overflow checks for pull payment execution', async () => {
+    beforeEach('update the rate for a very high number', async () => {
+      const rate = DECIMAL_FIXER + '00000'; // 1 PMA = 100k EUR // 10^15
+      await pumaPayPullPayment.setRate('EUR', rate, {
+        from: owner
+      });
+    });
+
+    beforeEach('Approve pull payment smart contract with 90 Billion Billions of PMA', async () => {
+      await token.approve(pumaPayPullPayment.address, web3.utils.toWei(( MINTED_TOKENS + '000000000000000000' )), {
+        from: clientOne
+      });
+    });
+
+    it('should execute a pull payment of 1 BILLION FIAT with a conversion rate of 1 PMA = 100k EUR', async () => {
+      const signature = await calcSignedMessageForRegistration(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        singlePullPayment.currency,
+        singlePullPayment.uniqueReferenceID,
+        singlePullPayment.initialPaymentAmountInCents,
+        singlePullPayment.fiatAmountInCents,
+        singlePullPayment.frequency,
+        singlePullPayment.numberOfPayments,
+        singlePullPayment.startTimestamp,
+        {
+          from: executorOne
+        });
+
+      await timeTravel(DAY + 1);
+      await pumaPayPullPayment.executePullPayment(singlePullPayment.client, singlePullPayment.paymentID, {
+        from: facilitatorOne
+      });
+      const balanceOfTreasuryAfter = await token.balanceOf(treasuryAddress);
+      // 1 PMA = 100k EUR ==> 1 Billion EUR = 10000 PMA
+      Number(balanceOfTreasuryAfter.toString()).should.be.equal(10000 * ONE_ETHER);
+    });
+
+    it('should execute a pull payment of 100k FIAT with a conversion rate of 1 PMA = 0.000001 FIAT', async () => {
+      singlePullPayment.fiatAmountInCents = 10000000; // 100k FIAT in cents
+      const signature = await calcSignedMessageForRegistration(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        singlePullPayment.currency,
+        singlePullPayment.uniqueReferenceID,
+        singlePullPayment.initialPaymentAmountInCents,
+        singlePullPayment.fiatAmountInCents,
+        singlePullPayment.frequency,
+        singlePullPayment.numberOfPayments,
+        singlePullPayment.startTimestamp,
+        {
+          from: executorOne
+        });
+
+      const rate = '100000'; // 1 PMA = 0.00001 FIAT // 0.00001 * DECIMAL_FIXER
+      await pumaPayPullPayment.setRate('EUR', rate, {
+        from: owner
+      });
+
+      await timeTravel(DAY + 1);
+      await pumaPayPullPayment.executePullPayment(singlePullPayment.client, singlePullPayment.paymentID, {
+        from: facilitatorOne
+      });
+      const balanceOfTreasuryAfter = await token.balanceOf(treasuryAddress);
+      // 1 PMA = 0.00001 EUR ==> 1 EUR = 100000 PMA ==> 100k EUR = 10000000000 PMA
+      Number(balanceOfTreasuryAfter.toString()).should.be.equal(10000000000 * ONE_ETHER);
     });
   });
 });

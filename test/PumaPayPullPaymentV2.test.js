@@ -6,7 +6,7 @@ const {
   calcSignedMessageForDeletion,
   getVRS
 } = require('./helpers/signatureCalculator');
-const PumaPayToken = artifacts.require('ERC20Mintable');
+const PumaPayToken = artifacts.require('MockMintableToken');
 
 const PumaPayPullPayment = artifacts.require('PumaPayPullPaymentV2');
 const BigNumber = web3.BigNumber;
@@ -24,11 +24,13 @@ const YEAR = 365 * DAY;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const ONE_ETHER = web3.utils.toWei('1', 'ether');
+const FUNDING_AMOUNT = web3.utils.toWei('0.5', 'ether');
+const MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15;
 const MINTED_TOKENS = web3.utils.toWei('1000000000', 'ether'); // 1 Billion PMA
 const DECIMAL_FIXER = 10 ** 10;
 const FIAT_TO_CENT_FIXER = 100;
-const EUR_EXCHANGE_RATE = 100000000; // 0.01 * 1^10
-const USD_EXCHANGE_RATE = 200000000; // 0.02 * 1^10
+const EUR_EXCHANGE_RATE = 0.01 * DECIMAL_FIXER; // 1 PMA = 0.01 EUR
+const USD_EXCHANGE_RATE = 0.02 * DECIMAL_FIXER; // 1 PMA = 0.02 USD
 
 const CLIENT_ONE_PRIVATE_KEY = '0x581a2b62e840bae3e56685c5ede97d0cb1f252fa7937026dcac489074b01fc29';
 const CLIENT_TWO_PRIVATE_KEY = '0xc5459c6743cd4fe5a89c3fc994c2bdfd5dbac6ecd750f642bd2e272d9fa0852d';
@@ -220,7 +222,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
       const expectedBalance = web3.utils.fromWei(String(executorBalanceAfter), 'ether') - web3.utils.fromWei(String(executorBalanceBefore), 'ether');
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(String(expectedBalance), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
     });
 
     it('should revert when the executor is a ZERO address', async () => {
@@ -1910,14 +1912,14 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the owner when its balance is lower than 0.01 ETH', async () => {
+    it('should transfer ETH to the owner when its balance is lower than 0.15 ETH', async () => {
       const ownerBalance = await web3.eth.getBalance(owner);
       const ownerBalanceETH = web3.utils.fromWei(String(ownerBalance), 'ether');
 
       await web3.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: web3.utils.toWei(String(ownerBalanceETH - 0.01))
+        value: web3.utils.toWei(String(ownerBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
       const ownerBalanceBefore = await web3.eth.getBalance(owner);
       const transaction = await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1926,13 +1928,10 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const txFee = Number(transaction.receipt.gasUsed) * GAS_PRICE;
       const ownerBalanceAfter = await web3.eth.getBalance(owner);
 
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(ownerBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(ownerBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
+      const expectedBalance = web3.utils.toBN(ownerBalanceAfter).sub(web3.utils.toBN(ownerBalanceBefore)).add(web3.utils.toBN(txFee));
       const executor = await pumaPayPullPayment.executors(executorOne);
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
       assert.equal(executor, true);
     });
   });
@@ -1955,14 +1954,14 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the owner when its balance is lower than 0.01 ETH', async () => {
+    it('should transfer ETH to the owner when its balance is lower than 0.15 ETH', async () => {
       const ownerBalance = await web3.eth.getBalance(owner);
       const ownerBalanceETH = web3.utils.fromWei(String(ownerBalance), 'ether');
 
       await web3.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: web3.utils.toWei(String(ownerBalanceETH - 0.01))
+        value: web3.utils.toWei(String(ownerBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const ownerBalanceBefore = await web3.eth.getBalance(owner);
@@ -1973,13 +1972,10 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
       const ownerBalanceAfter = await web3.eth.getBalance(owner);
 
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(ownerBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(ownerBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
+      const expectedBalance = web3.utils.toBN(ownerBalanceAfter).sub(web3.utils.toBN(ownerBalanceBefore)).add(web3.utils.toBN(txFee));
       const executor = await pumaPayPullPayment.executors(executorOne);
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
       assert.equal(executor, false);
     });
   });
@@ -2005,13 +2001,13 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         value: 5 * ONE_ETHER
       });
     });
-    it('should transfer ETH to the executor when its balance is lower than 0.01 ETH and register a pull payment', async () => {
+    it('should transfer ETH to the executor when its balance is lower than 0.15 ETH and register a pull payment', async () => {
       const executorBalance = await web3.eth.getBalance(executorOne);
       const executorBalanceETH = web3.utils.fromWei(String(executorBalance), 'ether');
       await web3.eth.sendTransaction({
         from: executorOne,
         to: deployerAccount,
-        value: web3.utils.toWei(String(executorBalanceETH - 0.01))
+        value: web3.utils.toWei(String(executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
@@ -2033,11 +2029,9 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
       const txFee = Number(transaction.receipt.gasUsed) * GAS_PRICE;
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(executorBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(executorBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      const expectedBalance = web3.utils.toBN(executorBalanceAfter).sub(web3.utils.toBN(executorBalanceBefore)).add(web3.utils.toBN(txFee));
+
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
       const ethDate = await currentBlockTime();
       const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress);
@@ -2103,7 +2097,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await web3.eth.sendTransaction({
         from: executorOne,
         to: deployerAccount,
-        value: web3.utils.toWei(String(executorBalanceETH - 0.01))
+        value: web3.utils.toWei(String(executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
@@ -2122,16 +2116,18 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
       const txFee = Number(transaction.receipt.gasUsed) * GAS_PRICE;
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(executorBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(executorBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      const expectedBalance = web3.utils.toBN(executorBalanceAfter).sub(web3.utils.toBN(executorBalanceBefore)).add(web3.utils.toBN(txFee));
+
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
       const ethDate = await currentBlockTime();
       const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress);
 
       String(activePaymentInArray[ 11 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // CANCEL PAYMENT TS
     });
+  });
+
+  describe('Overflow checks', async () => {
+
   });
 });

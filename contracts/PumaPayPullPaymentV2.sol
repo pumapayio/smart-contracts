@@ -48,9 +48,13 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
-    uint256 constant private DECIMAL_FIXER = 10 ** 10;             /// 1e^10 - This transforms the Rate from decimals to uint256
-    uint256 constant private FIAT_TO_CENT_FIXER = 100;             /// Fiat currencies have 100 cents in 1 basic monetary unit.
+    uint256 constant private RATE_CALCULATION_NUMBER = 10 ** 26;    /// Check `calculatePMAFromFiat()` for more details
     uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;   /// 1e^20 - Prevent numeric overflows
+
+    /// @dev The following variables are not needed any more, but are kept hre for clarity on the calculation that
+    /// is being done for the PMA to Fiat from rate.
+    /// uint256 constant private DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256
+    /// uint256 constant private FIAT_TO_CENT_FIXER = 100; /// Fiat currencies have 100 cents in 1 basic monetary unit.
 
     uint256 constant private ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
     uint256 constant private FUNDING_AMOUNT = 0.5 ether;                           /// Amount to transfer to owner/executor
@@ -281,9 +285,11 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
 
         require(_paymentAmounts[0] > 0, "Initial conversion rate is zero.");
         require(_paymentAmounts[1] > 0, "Payment amount in fiat is zero.");
+        require(_paymentAmounts[2] >= 0, "Initial opayment amount in fiat is less than zero.");
         require(_paymentTimestamps[0] > 0, "Payment frequency is zero.");
         require(_paymentTimestamps[1] > 0, "Payment number of payments is zero.");
         require(_paymentTimestamps[2] > 0, "Payment start time is zero.");
+        require(_paymentTimestamps[3] >= 0, "Payment trial period is less than zero.");
 
         require(_paymentAmounts[0] < OVERFLOW_LIMITER_NUMBER, "Initial conversion rate is higher thant the overflow limit.");
         require(_paymentAmounts[1] < OVERFLOW_LIMITER_NUMBER, "Payment amount in fiat is higher thant the overflow limit.");
@@ -365,8 +371,8 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
             /// @dev For the rest of the cases the first payment happens on registration
             /// using the 'fiatAmountInCents' and 'initialConversionRate'.
             /// When the first payment takes place, the number of payment is decreased by 1,
-            /// and the next payment timestamp is set to the start timestamp signed by the customer
-            /// + the frequency of the payment.
+            /// and the next payment timestamp is set to the start timestamp signed by the
+            /// customer + the frequency of the payment.
         } else {
             executePullPaymentOnRegistration(
                 [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], /// paymentID , businessID , uniqueReferenceID
@@ -532,14 +538,23 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// Multiply with the fiat amount in cents
     /// Divide by the Rate of PMA to Fiat in cents
     /// Divide by the FIAT_TO_CENT_FIXER to fix the _fiatAmountInCents
+    /// ---------------------------------------------------------------------------------------------------------------
+    /// To save on gas, we have 'pre-calculated' the equation below and have set a constant in its place.
+    /// ONE_ETHER.mul(DECIMAL_FIXER).div(FIAT_TO_CENT_FIXER) = RATE_CALCULATION_NUMBER
+    /// ONE_ETHER = 10^18           |
+    /// DECIMAL_FIXER = 10^10       |   => 10^18 * 10^10 / 100 ==> 10^26  => RATE_CALCULATION_NUMBER = 10^26
+    /// FIAT_TO_CENT_FIXER = 100    |
+    /// NOTE: The aforementioned value is linked to the OVERFLOW_LIMITER_NUMBER which is set to 10^20.
+    /// ---------------------------------------------------------------------------------------------------------------
     function calculatePMAFromFiat(uint256 _fiatAmountInCents, uint256 _conversionRate)
     internal
     pure
     validAmount(_fiatAmountInCents)
     validAmount(_conversionRate)
     returns (uint256) {
-        return ONE_ETHER.mul(DECIMAL_FIXER).mul(_fiatAmountInCents).div(_conversionRate).div(FIAT_TO_CENT_FIXER);
+        return RATE_CALCULATION_NUMBER.mul(_fiatAmountInCents).div(conversionRates[_currency]);
     }
+
 
     /// @dev Checks if a registration request is valid by comparing the v, r, s params
     /// and the hashed params with the customer address.

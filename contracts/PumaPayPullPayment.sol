@@ -43,9 +43,13 @@ contract PumaPayPullPayment is PayableOwnable {
     ///                                      Constants
     /// ===============================================================================================================
 
-    uint256 constant private DECIMAL_FIXER = 10 ** 10;              /// 1e^10 - This transforms the Rate from decimals to uint256
-    uint256 constant private FIAT_TO_CENT_FIXER = 100;              /// Fiat currencies have 100 cents in 1 basic monetary unit.
+    uint256 constant private RATE_CALCULATION_NUMBER = 10 ** 26;    /// Check `calculatePMAFromFiat()` for more details
     uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
+
+    /// @dev The following variables are not needed any more, but are kept hre for clarity on the calculation that
+    /// is being done for the PMA to Fiat from rate.
+    /// uint256 constant private DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256
+    /// uint256 constant private FIAT_TO_CENT_FIXER = 100; /// Fiat currencies have 100 cents in 1 basic monetary unit.
 
     uint256 constant private ONE_ETHER = 1 ether;                               /// PumaPay token has 18 decimals - same as one ETHER
     uint256 constant private FUNDING_AMOUNT = 0.5 ether;                        /// Amount to transfer to owner/executor
@@ -141,12 +145,12 @@ contract PumaPayPullPayment is PayableOwnable {
 
     modifier validConversionRate(string memory _currency) {
         require(bytes(_currency).length != 0, "Invalid conversion rate - Currency is empty.");
-        require(conversionRates[_currency] > 0, "Invalid conversion rate - Must be higher than zero.");
         _;
     }
 
-    modifier validAmount(uint256 _fiatAmountInCents) {
-        require(_fiatAmountInCents > 0, "Invalid amount - Must be higher than zero");
+    modifier validAmount(uint256 _amount) {
+        require(_amount > 0, "Invalid amount - Must be higher than zero");
+        require(_amount <= OVERFLOW_LIMITER_NUMBER, "Invalid amount - Must be lower than the overflow limit.");
         _;
     }
 
@@ -170,8 +174,8 @@ contract PumaPayPullPayment is PayableOwnable {
     ///                                      Public Functions - Owner Only
     /// ===============================================================================================================
 
-    /// @dev Adds a new executor. - can be executed only by the onwer.
-    /// When adding a new executor 0.5 ETH is tranferred to allow the executor to pay for gas.
+    /// @dev Adds a new executor. - can be executed only by the owner.
+    /// When adding a new executor 0.5 ETH is transferred to allow the executor to pay for gas.
     /// The balance of the owner is also checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
 
@@ -221,7 +225,9 @@ contract PumaPayPullPayment is PayableOwnable {
     function setRate(string memory _currency, uint256 _rate)
     public
     onlyOwner
+    validAmount(_rate)
     returns (bool) {
+        require(bytes(_currency).length != 0, "Invalid conversion rate - Currency is empty.");
         conversionRates[_currency] = _rate;
         emit LogSetConversionRate(_currency, _rate);
 
@@ -279,12 +285,13 @@ contract PumaPayPullPayment is PayableOwnable {
         require(_addresses[1] != address(0), "Beneficiary Address is ZERO_ADDRESS.");
         require(_addresses[2] != address(0), "Treasury Address is ZERO_ADDRESS.");
         require(_fiatAmountInCents > 0, "Payment amount in fiat is zero.");
+        require(_fiatAmountInCents <= OVERFLOW_LIMITER_NUMBER, "Payment amount is higher thant the overflow limit.");
         require(_frequency > 0, "Payment frequency is zero.");
-        require(_frequency < OVERFLOW_LIMITER_NUMBER, "Payment frequency is higher thant the overflow limit.");
+        require(_frequency <= OVERFLOW_LIMITER_NUMBER, "Payment frequency is higher thant the overflow limit.");
         require(_numberOfPayments > 0, "Payment number of payments is zero.");
-        require(_numberOfPayments < OVERFLOW_LIMITER_NUMBER, "Payment number of payments is higher thant the overflow limit.");
+        require(_numberOfPayments <= OVERFLOW_LIMITER_NUMBER, "Payment number of payments is higher thant the overflow limit.");
         require(_startTimestamp > 0, "Payment start time is zero.");
-        require(_startTimestamp < OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
+        require(_startTimestamp <= OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
 
         pullPayments[_addresses[0]][_addresses[1]].currency = _currency;
         pullPayments[_addresses[0]][_addresses[1]].initialPaymentAmountInCents = _initialPaymentAmountInCents;
@@ -444,13 +451,21 @@ contract PumaPayPullPayment is PayableOwnable {
     /// Multiply with the fiat amount in cents
     /// Divide by the Rate of PMA to Fiat in cents
     /// Divide by the FIAT_TO_CENT_FIXER to fix the _fiatAmountInCents
+    /// ---------------------------------------------------------------------------------------------------------------
+    /// To save on gas, we have 'pre-calculated' the equation below and have set a constant in its place.
+    /// ONE_ETHER.mul(DECIMAL_FIXER).div(FIAT_TO_CENT_FIXER) = RATE_CALCULATION_NUMBER
+    /// ONE_ETHER = 10^18           |
+    /// DECIMAL_FIXER = 10^10       |   => 10^18 * 10^10 / 100 ==> 10^26  => RATE_CALCULATION_NUMBER = 10^26
+    /// FIAT_TO_CENT_FIXER = 100    |
+    /// NOTE: The aforementioned value is linked to the OVERFLOW_LIMITER_NUMBER which is set to 10^20.
+    /// ---------------------------------------------------------------------------------------------------------------
     function calculatePMAFromFiat(uint256 _fiatAmountInCents, string memory _currency)
     internal
     view
     validConversionRate(_currency)
     validAmount(_fiatAmountInCents)
     returns (uint256) {
-        return ONE_ETHER.mul(DECIMAL_FIXER).mul(_fiatAmountInCents).div(conversionRates[_currency]).div(FIAT_TO_CENT_FIXER);
+        return RATE_CALCULATION_NUMBER.mul(_fiatAmountInCents).div(conversionRates[_currency]);
     }
 
     /// @dev Checks if a registration request is valid by comparing the v, r, s params
