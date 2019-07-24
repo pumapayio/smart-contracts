@@ -206,9 +206,12 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
 
     it('should set the executor specified to true', async () => {
-      await pumaPayPullPayment.addExecutor(executorOne, {
-        from: owner
-      });
+      console.log('adding exec');
+      console.log(owner);
+      await pumaPayPullPayment.addExecutor(executorOne,
+        {
+          from: owner
+        });
       const executor = await pumaPayPullPayment.executors(executorOne);
 
       assert.equal(executor, true);
@@ -321,7 +324,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const signature = await calcSignedMessageForRegistrationV2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await pumaPayPullPayment.registerPullPayment(
+      const b = await pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -412,6 +415,37 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
           from: executorOne
         }));
       singlePullPayment.currency = 'EUR';
+    });
+
+    it('should revert when the payment already exists', async () => {
+      const signature = await calcSignedMessageForRegistrationV2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
+        [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
+        singlePullPayment.currency,
+        {
+          from: executorOne
+        });
+
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
+        [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
+        singlePullPayment.currency,
+        {
+          from: executorOne
+        }));
     });
 
     it('should emit a "LogPaymentRegistered" event', async () => {
@@ -572,7 +606,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE, recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -606,7 +640,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE, recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -621,7 +655,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE, recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -837,7 +871,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -873,7 +908,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -883,7 +919,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments - 1 ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -903,7 +940,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments - 2 ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -1094,7 +1132,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithFreeTrial.client,
         recurringWithFreeTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithFreeTrial.numberOfPayments ],
         {
           from: recurringWithFreeTrial.pullPaymentExecutorAddress
         }
@@ -1130,7 +1169,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringWithFreeTrial.client,
           recurringWithFreeTrial.paymentID,
-          USD_EXCHANGE_RATE,
+          [ USD_EXCHANGE_RATE,
+            recurringWithFreeTrial.numberOfPayments - i ],
           {
             from: recurringWithFreeTrial.pullPaymentExecutorAddress
           }
@@ -1150,7 +1190,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithFreeTrial.client,
         recurringWithFreeTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithFreeTrial.numberOfPayments - recurringWithFreeTrial.numberOfPayments ],
         {
           from: recurringWithFreeTrial.pullPaymentExecutorAddress
         }
@@ -1179,7 +1220,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithFreeTrial.client,
         recurringWithFreeTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithFreeTrial.numberOfPayments ],
         {
           from: recurringWithFreeTrial.pullPaymentExecutorAddress
         }
@@ -1365,7 +1407,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringWithPaidTrial.client,
           recurringWithPaidTrial.paymentID,
-          EUR_EXCHANGE_RATE,
+          [ EUR_EXCHANGE_RATE,
+            recurringWithPaidTrial.numberOfPayments - i ],
           {
             from: recurringWithPaidTrial.pullPaymentExecutorAddress
           }
@@ -1386,7 +1429,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithPaidTrial.client,
         recurringWithPaidTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithPaidTrial.numberOfPayments - recurringWithPaidTrial.numberOfPayments ],
         {
           from: recurringWithPaidTrial.pullPaymentExecutorAddress
         }
@@ -1415,7 +1459,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithPaidTrial.client,
         recurringWithPaidTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithPaidTrial.numberOfPayments ],
         {
           from: recurringWithPaidTrial.pullPaymentExecutorAddress
         }
@@ -1674,7 +1719,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1694,7 +1740,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1712,7 +1759,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1729,7 +1777,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1746,7 +1795,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1759,7 +1809,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringPullPayment.client,
           recurringPullPayment.paymentID,
-          EUR_EXCHANGE_RATE,
+          [ EUR_EXCHANGE_RATE,
+            recurringPullPayment.numberOfPayments - ( i + 2 ) ],
           {
             from: recurringPullPayment.pullPaymentExecutorAddress
           }
@@ -1777,7 +1828,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - recurringPullPayment.numberOfPayments ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1789,7 +1841,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1815,7 +1868,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringPullPayment.client,
           recurringPullPayment.paymentID,
-          EUR_EXCHANGE_RATE,
+          [ EUR_EXCHANGE_RATE,
+            recurringPullPayment.numberOfPayments - ( i + 2 ) ],
           {
             from: recurringPullPayment.pullPaymentExecutorAddress
           }
@@ -1833,7 +1887,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 6 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1844,7 +1899,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1869,7 +1925,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1880,7 +1937,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const pullPaymentExecution = await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -2175,7 +2233,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        rate,
+        [ rate,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         });
@@ -2213,7 +2272,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        rate,
+        [ rate,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         });

@@ -406,6 +406,45 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
         }));
     });
 
+    it('should revert when the payment already exists', async () => {
+      const signature = await calcSignedMessageForRegistration(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        singlePullPayment.currency,
+        singlePullPayment.uniqueReferenceID,
+        singlePullPayment.initialPaymentAmountInCents,
+        singlePullPayment.fiatAmountInCents,
+        singlePullPayment.frequency,
+        singlePullPayment.numberOfPayments,
+        singlePullPayment.startTimestamp,
+        {
+          from: executorOne
+        }
+      );
+
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        singlePullPayment.currency,
+        singlePullPayment.uniqueReferenceID,
+        singlePullPayment.initialPaymentAmountInCents,
+        singlePullPayment.fiatAmountInCents,
+        singlePullPayment.frequency,
+        singlePullPayment.numberOfPayments,
+        singlePullPayment.startTimestamp,
+        {
+          from: executorOne
+        }));
+    });
 
     it('should emit a "LogPaymentRegistered" event', async () => {
       const signature = await calcSignedMessageForRegistration(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
