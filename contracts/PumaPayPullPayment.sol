@@ -101,38 +101,42 @@ contract PumaPayPullPayment is PayableOwnable {
         _;
     }
 
-    modifier paymentExists(address _customer, address _pullPaymentExecutor) {
-        require(doesPaymentExist(_customer, _pullPaymentExecutor), "Pull Payment does not exists");
+    modifier paymentExists(address _customerAddress, address _pullPaymentExecutor) {
+        require(doesPaymentExist(_customerAddress, _pullPaymentExecutor), "Pull Payment does not exists");
         _;
     }
 
-    modifier paymentNotCancelled(address _customer, address _pullPaymentExecutor) {
-        require(pullPayments[_customer][_pullPaymentExecutor].cancelTimestamp == 0, "Pull Payment is cancelled.");
+    modifier paymentNotCancelled(address _customerAddress, address _pullPaymentExecutor) {
+        require(pullPayments[_customerAddress][_pullPaymentExecutor].cancelTimestamp == 0, "Pull Payment is cancelled.");
         _;
     }
 
-    modifier isValidPullPaymentExecutionRequest(address _customer, address _pullPaymentExecutor, bytes32 _paymentID) {
+    modifier isValidPullPaymentExecutionRequest(address _customerAddress, address _pullPaymentExecutor, bytes32 _paymentID, uint256 _paymentNumber)
+    {
+        require(pullPayments[_customerAddress][_pullPaymentExecutor].numberOfPayments == _paymentNumber,
+            "Invalid pull payment execution request - Pull payment number of payment is invalid");
+
         require(
-            (pullPayments[_customer][_pullPaymentExecutor].initialPaymentAmountInCents > 0 ||
-        (now >= pullPayments[_customer][_pullPaymentExecutor].startTimestamp &&
-        now >= pullPayments[_customer][_pullPaymentExecutor].nextPaymentTimestamp)
+            (pullPayments[_customerAddress][_pullPaymentExecutor].initialPaymentAmountInCents > 0 ||
+        (now >= pullPayments[_customerAddress][_pullPaymentExecutor].startTimestamp &&
+        now >= pullPayments[_customerAddress][_pullPaymentExecutor].nextPaymentTimestamp)
             ), "Invalid pull payment execution request - Time of execution is invalid."
         );
-        require(pullPayments[_customer][_pullPaymentExecutor].numberOfPayments > 0,
+        require(pullPayments[_customerAddress][_pullPaymentExecutor].numberOfPayments > 0,
             "Invalid pull payment execution request - Number of payments is zero.");
 
-        require((pullPayments[_customer][_pullPaymentExecutor].cancelTimestamp == 0 ||
-        pullPayments[_customer][_pullPaymentExecutor].cancelTimestamp > pullPayments[_customer][_pullPaymentExecutor].nextPaymentTimestamp),
+        require((pullPayments[_customerAddress][_pullPaymentExecutor].cancelTimestamp == 0 ||
+        pullPayments[_customerAddress][_pullPaymentExecutor].cancelTimestamp > pullPayments[_customerAddress][_pullPaymentExecutor].nextPaymentTimestamp),
             "Invalid pull payment execution request - Pull payment is cancelled");
         require(keccak256(
-            abi.encodePacked(pullPayments[_customer][_pullPaymentExecutor].paymentID)
+            abi.encodePacked(pullPayments[_customerAddress][_pullPaymentExecutor].paymentID)
         ) == keccak256(abi.encodePacked(_paymentID)),
             "Invalid pull payment execution request - Payment ID not matching.");
         _;
     }
 
-    modifier isValidDeletionRequest(bytes32 _paymentID, address _customer, address _pullPaymentExecutor) {
-        require(_customer != address(0), "Invalid deletion request - Client address is ZERO_ADDRESS.");
+    modifier isValidDeletionRequest(bytes32 _paymentID, address _customerAddress, address _pullPaymentExecutor) {
+        require(_customerAddress != address(0), "Invalid deletion request - Client address is ZERO_ADDRESS.");
         require(_pullPaymentExecutor != address(0), "Invalid deletion request - Beneficiary address is ZERO_ADDRESS.");
         require(_paymentID != EMPTY_BYTES32, "Invalid deletion request - Payment ID is empty.");
         _;
@@ -246,9 +250,9 @@ contract PumaPayPullPayment is PayableOwnable {
 
     /// @dev Registers a new pull payment to the PumaPay Pull Payment Contract - The registration can be executed only
     /// by one of the executors of the PumaPay Pull Payment Contract
-    /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
+    /// and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customerAddress of the account.
     /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
-    /// Emits 'LogPaymentRegistered' with customer address, beneficiary address and paymentID.
+    /// Emits 'LogPaymentRegistered' with customerAddress address, beneficiary address and paymentID.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
@@ -265,7 +269,7 @@ contract PumaPayPullPayment is PayableOwnable {
         bytes32 r,
         bytes32 s,
         bytes32[2] memory _ids, // [0] paymentID, [1] businessID
-        address[3] memory _addresses, // [0] customer, [1] pull payment executor, [2] treasury wallet
+        address[3] memory _addresses, // [0] customerAddress, [1] pull payment executor, [2] treasury wallet
         string memory _currency,
         string memory _uniqueReferenceID,
         uint256 _initialPaymentAmountInCents,
@@ -277,6 +281,8 @@ contract PumaPayPullPayment is PayableOwnable {
     public
     isExecutor()
     {
+        require(!doesPaymentExist(_addresses[0], _addresses[1]), "Pull Payment already exists.");
+
         require(_ids[0] != EMPTY_BYTES32, "Payment ID is empty.");
         require(_ids[1] != EMPTY_BYTES32, "Business ID is empty.");
         require(bytes(_currency).length > 0, "Currency is empty.");
@@ -333,7 +339,7 @@ contract PumaPayPullPayment is PayableOwnable {
     /// @dev Deletes a pull payment for a beneficiary - The deletion needs can be executed only by one of the
     /// executors of the PumaPay Pull Payment Contract
     /// and the PumaPay Pull Payment Contract checks that the beneficiary and the paymentID have
-    /// been singed by the customer of the account.
+    /// been singed by the customerAddress of the account.
     /// This method sets the cancellation of the pull payment in the pull payments array for this beneficiary specified.
     /// The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     /// Emits 'LogPaymentCancelled' with beneficiary address and paymentID.
@@ -341,25 +347,25 @@ contract PumaPayPullPayment is PayableOwnable {
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
     /// @param _paymentID - ID of the payment.
-    /// @param _customer - customer address that is linked to this pull payment.
+    /// @param _customerAddress - customerAddress address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
     function deletePullPayment(
         uint8 v,
         bytes32 r,
         bytes32 s,
         bytes32 _paymentID,
-        address _customer,
+        address _customerAddress,
         address _pullPaymentExecutor
     )
     public
     isExecutor()
-    paymentExists(_customer, _pullPaymentExecutor)
-    paymentNotCancelled(_customer, _pullPaymentExecutor)
-    isValidDeletionRequest(_paymentID, _customer, _pullPaymentExecutor)
+    paymentExists(_customerAddress, _pullPaymentExecutor)
+    paymentNotCancelled(_customerAddress, _pullPaymentExecutor)
+    isValidDeletionRequest(_paymentID, _customerAddress, _pullPaymentExecutor)
     {
-        require(isValidDeletion(v, r, s, _paymentID, _customer, _pullPaymentExecutor), "Invalid deletion - ECRECOVER_FAILED.");
+        require(isValidDeletion(v, r, s, _paymentID, _customerAddress, _pullPaymentExecutor), "Invalid deletion - ECRECOVER_FAILED.");
 
-        pullPayments[_customer][_pullPaymentExecutor].cancelTimestamp = now;
+        pullPayments[_customerAddress][_pullPaymentExecutor].cancelTimestamp = now;
 
         if (isFundingNeeded(msg.sender)) {
             msg.sender.transfer(FUNDING_AMOUNT);
@@ -368,10 +374,10 @@ contract PumaPayPullPayment is PayableOwnable {
         }
 
         emit LogPaymentCancelled(
-            _customer,
+            _customerAddress,
             _paymentID,
-            pullPayments[_customer][_pullPaymentExecutor].businessID,
-            pullPayments[_customer][_pullPaymentExecutor].uniqueReferenceID
+            pullPayments[_customerAddress][_pullPaymentExecutor].businessID,
+            pullPayments[_customerAddress][_pullPaymentExecutor].uniqueReferenceID
         );
     }
 
@@ -381,55 +387,56 @@ contract PumaPayPullPayment is PayableOwnable {
 
     /// @dev Executes a pull payment for the msg.sender - The pull payment should exist and the payment request
     /// should be valid in terms of when it can be executed.
-    /// Emits 'LogPullPaymentExecuted' with customer address, msg.sender as the beneficiary address and the paymentID.
+    /// Emits 'LogPullPaymentExecuted' with customerAddress address, msg.sender as the beneficiary address and the paymentID.
     /// Use Case 1: Single/Recurring Fixed Pull Payment (initialPaymentAmountInCents == 0 )
     /// ------------------------------------------------
     /// We calculate the amount in PMA using the rate for the currency specified in the pull payment
-    /// and the 'fiatAmountInCents' and we transfer from the customer account the amount in PMA.
+    /// and the 'fiatAmountInCents' and we transfer from the customerAddress account the amount in PMA.
     /// After execution we set the last payment timestamp to NOW, the next payment timestamp is incremented by
     /// the frequency and the number of payments is decreased by 1.
     /// Use Case 2: Recurring Fixed Pull Payment with initial fee (initialPaymentAmountInCents > 0)
     /// ------------------------------------------------------------------------------------------------
     /// We calculate the amount in PMA using the rate for the currency specified in the pull payment
-    /// and the 'initialPaymentAmountInCents' and we transfer from the customer account the amount in PMA.
+    /// and the 'initialPaymentAmountInCents' and we transfer from the customerAddress account the amount in PMA.
     /// After execution we set the last payment timestamp to NOW and the 'initialPaymentAmountInCents to ZERO.
-    /// @param _customer - address of the customer from which the msg.sender requires to pull funds.
+    /// @param _customerAddress - address of the customerAddress from which the msg.sender requires to pull funds.
     /// @param _paymentID - ID of the payment.
-    function executePullPayment(address _customer, bytes32 _paymentID)
+    function executePullPayment(address _customerAddress, bytes32 _paymentID, uint256 _paymentNumber)
     public
-    paymentExists(_customer, msg.sender)
-    isValidPullPaymentExecutionRequest(_customer, msg.sender, _paymentID)
+    paymentExists(_customerAddress, msg.sender)
+    isValidPullPaymentExecutionRequest(_customerAddress, msg.sender, _paymentID, _paymentNumber)
     {
         uint256 amountInPMA;
-        uint256 initialAmountInCents = pullPayments[_customer][msg.sender].initialPaymentAmountInCents;
+        address customerAddress = _customerAddress;
+        uint256 initialAmountInCents = pullPayments[customerAddress][msg.sender].initialPaymentAmountInCents;
 
         if (initialAmountInCents > 0) {
-            amountInPMA = calculatePMAFromFiat(initialAmountInCents, pullPayments[_customer][msg.sender].currency);
+            amountInPMA = calculatePMAFromFiat(initialAmountInCents, pullPayments[customerAddress][msg.sender].currency);
 
-            pullPayments[_customer][msg.sender].initialPaymentAmountInCents = 0;
+            pullPayments[customerAddress][msg.sender].initialPaymentAmountInCents = 0;
         } else {
             amountInPMA = calculatePMAFromFiat(
-                pullPayments[_customer][msg.sender].fiatAmountInCents,
-                pullPayments[_customer][msg.sender].currency
+                pullPayments[customerAddress][msg.sender].fiatAmountInCents,
+                pullPayments[customerAddress][msg.sender].currency
             );
 
-            pullPayments[_customer][msg.sender].nextPaymentTimestamp =
-            pullPayments[_customer][msg.sender].nextPaymentTimestamp + pullPayments[_customer][msg.sender].frequency;
-            pullPayments[_customer][msg.sender].numberOfPayments = pullPayments[_customer][msg.sender].numberOfPayments - 1;
+            pullPayments[customerAddress][msg.sender].nextPaymentTimestamp =
+            pullPayments[customerAddress][msg.sender].nextPaymentTimestamp + pullPayments[customerAddress][msg.sender].frequency;
+            pullPayments[customerAddress][msg.sender].numberOfPayments = pullPayments[customerAddress][msg.sender].numberOfPayments - 1;
         }
 
-        pullPayments[_customer][msg.sender].lastPaymentTimestamp = now;
+        pullPayments[customerAddress][msg.sender].lastPaymentTimestamp = now;
         token.transferFrom(
-            _customer,
-            pullPayments[_customer][msg.sender].treasuryAddress,
+            customerAddress,
+            pullPayments[customerAddress][msg.sender].treasuryAddress,
             amountInPMA
         );
 
         emit LogPullPaymentExecuted(
-            _customer,
-            pullPayments[_customer][msg.sender].paymentID,
-            pullPayments[_customer][msg.sender].businessID,
-            pullPayments[_customer][msg.sender].uniqueReferenceID
+            customerAddress,
+            pullPayments[customerAddress][msg.sender].paymentID,
+            pullPayments[customerAddress][msg.sender].businessID,
+            pullPayments[customerAddress][msg.sender].uniqueReferenceID
         );
     }
 
@@ -472,19 +479,19 @@ contract PumaPayPullPayment is PayableOwnable {
     }
 
     /// @dev Checks if a registration request is valid by comparing the v, r, s params
-    /// and the hashed params with the customer address.
+    /// and the hashed params with the customerAddress address.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
-    /// @param _customer - customer address that is linked to this pull payment.
+    /// @param _customerAddress - customerAddress address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
     /// @param _pullPayment - pull payment to be validated.
-    /// @return bool - if the v, r, s params with the hashed params match the customer address
+    /// @return bool - if the v, r, s params with the hashed params match the customerAddress address
     function isValidRegistration(
         uint8 v,
         bytes32 r,
         bytes32 s,
-        address _customer,
+        address _customerAddress,
         address _pullPaymentExecutor,
         PullPayment memory _pullPayment
     )
@@ -508,24 +515,24 @@ contract PumaPayPullPayment is PayableOwnable {
                     _pullPayment.startTimestamp
                 )
             ),
-            v, r, s) == _customer;
+            v, r, s) == _customerAddress;
     }
 
     /// @dev Checks if a deletion request is valid by comparing the v, r, s params
-    /// and the hashed params with the customer address.
+    /// and the hashed params with the customerAddress address.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
     /// @param _paymentID - ID of the payment.
-    /// @param _customer - customer address that is linked to this pull payment.
+    /// @param _customerAddress - customerAddress address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
-    /// @return bool - if the v, r, s params with the hashed params match the customer address
+    /// @return bool - if the v, r, s params with the hashed params match the customerAddress address
     function isValidDeletion(
         uint8 v,
         bytes32 r,
         bytes32 s,
         bytes32 _paymentID,
-        address _customer,
+        address _customerAddress,
         address _pullPaymentExecutor
     )
     internal
@@ -538,28 +545,28 @@ contract PumaPayPullPayment is PayableOwnable {
                     _paymentID,
                     _pullPaymentExecutor
                 )
-            ), v, r, s) == _customer
+            ), v, r, s) == _customerAddress
         && keccak256(
-            abi.encodePacked(pullPayments[_customer][_pullPaymentExecutor].paymentID)
+            abi.encodePacked(pullPayments[_customerAddress][_pullPaymentExecutor].paymentID)
         ) == keccak256(abi.encodePacked(_paymentID)
         );
     }
 
-    /// @dev Checks if a payment for a beneficiary of a customer exists.
-    /// @param _customer - customer address that is linked to this pull payment.
+    /// @dev Checks if a payment for a beneficiary of a customerAddress exists.
+    /// @param _customerAddress - customerAddress address that is linked to this pull payment.
     /// @param _pullPaymentExecutor - address to execute a pull payment.
-    /// @return bool - whether the beneficiary for this customer has a pull payment to execute.
-    function doesPaymentExist(address _customer, address _pullPaymentExecutor)
+    /// @return bool - whether the beneficiary for this customerAddress has a pull payment to execute.
+    function doesPaymentExist(address _customerAddress, address _pullPaymentExecutor)
     internal
     view
     returns (bool) {
         return (
-        bytes(pullPayments[_customer][_pullPaymentExecutor].currency).length > 0 &&
-        pullPayments[_customer][_pullPaymentExecutor].fiatAmountInCents > 0 &&
-        pullPayments[_customer][_pullPaymentExecutor].frequency > 0 &&
-        pullPayments[_customer][_pullPaymentExecutor].startTimestamp > 0 &&
-        pullPayments[_customer][_pullPaymentExecutor].numberOfPayments > 0 &&
-        pullPayments[_customer][_pullPaymentExecutor].nextPaymentTimestamp > 0
+        bytes(pullPayments[_customerAddress][_pullPaymentExecutor].currency).length > 0 &&
+        pullPayments[_customerAddress][_pullPaymentExecutor].fiatAmountInCents > 0 &&
+        pullPayments[_customerAddress][_pullPaymentExecutor].frequency > 0 &&
+        pullPayments[_customerAddress][_pullPaymentExecutor].startTimestamp > 0 &&
+        pullPayments[_customerAddress][_pullPaymentExecutor].numberOfPayments > 0 &&
+        pullPayments[_customerAddress][_pullPaymentExecutor].nextPaymentTimestamp > 0
         );
     }
 
