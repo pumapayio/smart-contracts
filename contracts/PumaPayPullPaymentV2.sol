@@ -1,4 +1,4 @@
-pragma solidity 0.5.8;
+pragma solidity 0.5.10;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -392,6 +392,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
         bytes32[3] memory paymentIds = pullPayments[customerAddress][msg.sender].paymentIds;
         address treasury = pullPayments[customerAddress][msg.sender].treasuryAddress;
         uint256 amountInPMA = calculatePMAFromFiat(pullPayments[customerAddress][msg.sender].fiatAmountInCents, conversionRate);
+
         pullPayments[customerAddress][msg.sender].nextPaymentTimestamp =
         pullPayments[customerAddress][msg.sender].nextPaymentTimestamp + pullPayments[customerAddress][msg.sender].frequency;
         pullPayments[customerAddress][msg.sender].numberOfPayments = pullPayments[customerAddress][msg.sender].numberOfPayments - 1;
