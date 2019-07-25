@@ -1,5 +1,5 @@
 const {assertRevert} = require('./helpers/assertRevert');
-
+const {transferETH} = require('./helpers/tranfserHelper');
 const {timeTravel, currentBlockTime} = require('./helpers/timeHelper');
 const {
   calcSignedMessageForRegistration,
@@ -34,15 +34,6 @@ const USD_EXCHANGE_RATE = 0.02 * DECIMAL_FIXER; // 1 PMA = 0.02 USD
 const CLIENT_ONE_PRIVATE_KEY = '0x581a2b62e840bae3e56685c5ede97d0cb1f252fa7937026dcac489074b01fc29';
 const CLIENT_TWO_PRIVATE_KEY = '0xc5459c6743cd4fe5a89c3fc994c2bdfd5dbac6ecd750f642bd2e272d9fa0852d';
 const CLIENT_THREE_PRIVATE_KEY = '0x7f201ee20596c003b979ba39018b08cd7920abbc04a9d1bb984aa8be421db541';
-
-const transferEthersToSmartContract = async (ethers, fromAccount, smartContract) => {
-  await smartContract.sendTransaction(
-    {
-      from: fromAccount,
-      value: ethers * ONE_ETHER
-    }
-  );
-};
 
 contract('PumaPay Pull Payment Contract', async (accounts) => {
   const deployerAccount = accounts[ 0 ];
@@ -164,7 +155,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
   describe('Add executor', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
 
     it('should set the executor specified to true', async () => {
@@ -221,7 +212,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
   describe('Remove executor', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
 
     beforeEach('add an executor', async () => {
@@ -310,7 +301,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
   describe('Register Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -480,7 +471,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
   describe('Delete Recurring Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(2, deployerAccount, pumaPayPullPayment);
+      await transferETH(2, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -625,7 +616,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
   describe('Execute Single Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorTwo, {
@@ -769,7 +760,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
   describe('Execute Recurring Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -971,7 +962,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
 
   describe('Execute Recurring Pull Payment with initial amount', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1157,18 +1148,9 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
     });
   });
 
-  const transferEthersToSmartContract = async (ethers, fromAccount, smartContract) => {
-    await smartContract.sendTransaction(
-      {
-        from: fromAccount,
-        value: ethers * ONE_ETHER
-      }
-    );
-  };
-
   describe('Set Rate', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     afterEach('Transfer ETH to owner account', async () => {
       await web3.eth.sendTransaction({
@@ -1204,7 +1186,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
 
   describe('Add Executor', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(2, deployerAccount, pumaPayPullPayment);
+      await transferETH(2, deployerAccount, pumaPayPullPayment.address);
     });
     afterEach('Transfer ETH to owner account', async () => {
       await web3.eth.sendTransaction({
@@ -1242,7 +1224,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
 
   describe('Remove Executor', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(2, deployerAccount, pumaPayPullPayment);
+      await transferETH(2, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('Add executor ETH to smart contract', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1284,7 +1266,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
 
   describe('Register Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(3, deployerAccount, pumaPayPullPayment);
+      await transferETH(3, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('Add executor ETH to smart contract', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1362,7 +1344,7 @@ contract('PumaPay Pull Payment Contract For Funding', async (accounts) => {
 
   describe('Delete Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(3, deployerAccount, pumaPayPullPayment);
+      await transferETH(3, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('Add executor ETH to smart contract', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1492,7 +1474,7 @@ contract('PumaPay Pull Payment Contract For Overflow / Underflow checks', async 
   });
 
   beforeEach('Transfer ETH to smart contract', async () => {
-    await transferEthersToSmartContract(3, deployerAccount, pumaPayPullPayment);
+    await transferETH(3, deployerAccount, pumaPayPullPayment.address);
   });
 
   beforeEach('Add executor ETH to smart contract', async () => {
