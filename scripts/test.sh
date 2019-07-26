@@ -15,7 +15,11 @@ cleanup() {
   fi
 }
 
-ganache_port=8545
+if [ "$SOLIDITY_COVERAGE" = true ]; then
+  ganache_port=8555
+else
+  ganache_port=8545
+fi
 
 ganache_running() {
   nc -z localhost "$ganache_port"
@@ -28,12 +32,20 @@ start_ganache() {
   local gasLimit=0xfffffffffff
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    node_modules/.bin/testrpc-sc --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
+    npx ganache-cli-coverage --emitFreeLogs true --allowUnlimitedContractSize true --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
   else
-    node_modules/.bin/ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
+    npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
   fi
 
   ganache_pid=$!
+
+  echo "Waiting for ganache to launch on port "$ganache_port"..."
+
+  while ! ganache_running; do
+    sleep 0.1 # wait for 1/10 of the second before check again
+  done
+
+  echo "Ganache launched!"
 }
 
 if ganache_running; then
@@ -44,11 +56,11 @@ else
 fi
 
 if [ "$SOLIDITY_COVERAGE" = true ]; then
-  node_modules/.bin/solidity-coverage
+  npx solidity-coverage
 
   if [ "$CONTINUOUS_INTEGRATION" = true ]; then
-    cat coverage/lcov.info | node_modules/.bin/coveralls
+    cat coverage/lcov.info | npx coveralls
   fi
 else
-  node_modules/.bin/truffle test "$@" --network ganache
+  npx truffle test "$@" --network ganache
 fi
