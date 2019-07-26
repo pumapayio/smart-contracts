@@ -118,6 +118,35 @@ const calcSignedMessageForDeletion = async (paymentID, beneficiary, privateKey) 
   return signedMessage;
 };
 
+const calcSignedMessageToMakeSinglePullPayment = async (pullPayment, privateKey) => {
+  const messageHash = web3.utils.soliditySha3(
+    {
+      type: 'bytes32',
+      value: pullPayment.paymentID
+    }, {
+      type: 'bytes32',
+      value: pullPayment.businessID
+    }, {
+      type: 'uint256',
+      value: pullPayment.amountInPMA
+    }, {
+      type: 'address',
+      value: pullPayment.client
+    }, {
+      type: 'address',
+      value: pullPayment.treasuryAddress
+    }, {
+      type: 'string',
+      value: pullPayment.uniqueReferenceID
+    });
+
+  const signedMessage = EthCrypto.sign(
+    privateKey, messageHash
+  );
+
+  return signedMessage;
+};
+
 // Retrieving the VRS from the signature - happens on the server side
 const getVRS = async (singature) => {
   const sig = singature.slice(2);
@@ -135,6 +164,7 @@ const getVRS = async (singature) => {
 module.exports = {
   calcSignedMessageForRegistration,
   calcSignedMessageForRegistrationV2,
+  calcSignedMessageToMakeSinglePullPayment,
   calcSignedMessageForDeletion,
   getVRS
 };
