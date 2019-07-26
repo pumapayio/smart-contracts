@@ -1,4 +1,4 @@
-const {assertRevert} = require('./helpers/assertRevert');
+const {assertRevert} = require('./helpers/assertionHelper');
 const {transferETH} = require('./helpers/tranfserHelper');
 const {timeTravel, currentBlockTime} = require('./helpers/timeHelper');
 const {

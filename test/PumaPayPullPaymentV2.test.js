@@ -1,4 +1,4 @@
-const {assertRevert} = require('./helpers/assertRevert');
+const {assertRevert} = require('./helpers/assertionHelper');
 const {transferETH} = require('./helpers/tranfserHelper');
 const {timeTravel, currentBlockTime} = require('./helpers/timeHelper');
 const {
@@ -313,7 +313,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const signature = await calcSignedMessageForRegistrationV2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      const b = await pumaPayPullPayment.registerPullPayment(
+      await pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
