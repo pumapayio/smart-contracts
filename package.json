@@ -10,7 +10,7 @@
   "scripts": {
     "solc-update": "scripts/solc.sh",
     "test": "scripts/test.sh",
-    "coverage": "scripts/coverage.sh",
+    "coverage": "npm test -- true",
     "unify": "echo '' > unified/unified.sol && sh scripts/unify.sh",
     "lint": "prettier --list-different contracts/**/*.sol",
     "postinstall": "npm run solc-update"
