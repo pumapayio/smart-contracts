@@ -4,6 +4,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./ownership/PayableOwnable.sol";
 
+// TODO: update comments
 /// @title PumaPay Pull Payment V2.0 - Contract that facilitates our pull payment protocol
 /// V2.0 of the protocol removes the rates being set globally on the smart contract and it allows to pass the rate on
 /// pull payment registration and pull payment execution. In addition, when a registration of a pull payment takes place

@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-node_modules/.bin/truffle-flattener contracts/PumaPayPullPaymentV2.sol >> unified/unified.sol
+node_modules/.bin/truffle-flattener contracts/SinglePullPayment.sol >> unified/unified.sol
