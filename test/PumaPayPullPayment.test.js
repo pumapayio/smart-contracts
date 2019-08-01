@@ -167,7 +167,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
       assert.equal(executor, true);
     });
 
-    it('should transfer ETHER to the executor account for paying gas fees', async () => {
+    it('should NOT transfer ETHER to the executor account for paying gas fees if he holds enough funds', async () => {
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
       await pumaPayPullPayment.addExecutor(executorOne, {
         from: owner
@@ -175,7 +175,7 @@ contract('PumaPay Pull Payment Contract', async (accounts) => {
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
       const expectedBalance = web3.utils.fromWei(String(executorBalanceAfter), 'ether') - web3.utils.fromWei(String(executorBalanceBefore), 'ether');
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
+      assert.equal(String(expectedBalance), web3.utils.fromWei('0', 'ether'));
     });
 
     it('should revert when the executor is a ZERO address', async () => {

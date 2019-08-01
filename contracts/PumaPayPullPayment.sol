@@ -190,10 +190,12 @@ contract PumaPayPullPayment is PayableOwnable {
     isValidAddress(_executor)
     executorDoesNotExists(_executor)
     {
-        _executor.transfer(FUNDING_AMOUNT);
         executors[_executor] = true;
+        if (isFundingNeeded(_executor)) {
+            _executor.transfer(FUNDING_AMOUNT);
+            emit LogSmartContractActorFunded("executor", _executor, now);
+        }
 
-        emit LogSmartContractActorFunded("executor", _executor, now);
 
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);

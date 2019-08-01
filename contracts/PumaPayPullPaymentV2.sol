@@ -62,6 +62,7 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     IERC20 public token;
     mapping(address => bool) public executors;
     mapping(address => mapping(address => PullPayment)) public pullPayments;
+
     struct PullPayment {
         bytes32[3] paymentIds;                  /// [0] paymentID / [1] businessID / [2] uniqueReferenceID
         bytes32 paymentType;                    /// Type of Pull Payment - must be one of the defined pull payment types
@@ -167,9 +168,11 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     isValidAddress(_executor)
     executorDoesNotExists(_executor)
     {
-        _executor.transfer(FUNDING_AMOUNT);
         executors[_executor] = true;
-        emit LogSmartContractActorFunded("executor", _executor, now);
+        if (isFundingNeeded(_executor)) {
+            _executor.transfer(FUNDING_AMOUNT);
+            emit LogSmartContractActorFunded("executor", _executor, now);
+        }
 
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);
