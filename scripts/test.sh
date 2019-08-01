@@ -25,11 +25,12 @@ start_ganache() {
   local mnemonic="sport pattern badge pretty abandon venture stone cupboard plunge firm bulk essence"
   local balance=10000
   local gasPrice=1000000000
+  local gasLimit=0xfffffffffff
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    node_modules/.bin/testrpc-sc --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -a 20 > /dev/null &
+    node_modules/.bin/testrpc-sc --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
   else
-    node_modules/.bin/ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -a 20 > /dev/null &
+    node_modules/.bin/ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
   fi
 
   ganache_pid=$!

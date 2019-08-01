@@ -1,12 +1,12 @@
-const {assertRevert} = require('./helpers/assertRevert');
-
+const {assertRevert} = require('./helpers/assertionHelper');
+const {transferETH} = require('./helpers/tranfserHelper');
 const {timeTravel, currentBlockTime} = require('./helpers/timeHelper');
 const {
   calcSignedMessageForRegistrationV2,
   calcSignedMessageForDeletion,
   getVRS
 } = require('./helpers/signatureCalculator');
-const PumaPayToken = artifacts.require('ERC20Mintable');
+const PumaPayToken = artifacts.require('MockMintableToken');
 
 const PumaPayPullPayment = artifacts.require('PumaPayPullPaymentV2');
 const BigNumber = web3.BigNumber;
@@ -24,11 +24,13 @@ const YEAR = 365 * DAY;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 const ONE_ETHER = web3.utils.toWei('1', 'ether');
+const FUNDING_AMOUNT = web3.utils.toWei('0.5', 'ether');
+const MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15;
 const MINTED_TOKENS = web3.utils.toWei('1000000000', 'ether'); // 1 Billion PMA
 const DECIMAL_FIXER = 10 ** 10;
 const FIAT_TO_CENT_FIXER = 100;
-const EUR_EXCHANGE_RATE = 100000000; // 0.01 * 1^10
-const USD_EXCHANGE_RATE = 200000000; // 0.02 * 1^10
+const EUR_EXCHANGE_RATE = 0.01 * DECIMAL_FIXER; // 1 PMA = 0.01 EUR
+const USD_EXCHANGE_RATE = 0.02 * DECIMAL_FIXER; // 1 PMA = 0.02 USD
 
 const CLIENT_ONE_PRIVATE_KEY = '0x581a2b62e840bae3e56685c5ede97d0cb1f252fa7937026dcac489074b01fc29';
 const CLIENT_TWO_PRIVATE_KEY = '0xc5459c6743cd4fe5a89c3fc994c2bdfd5dbac6ecd750f642bd2e272d9fa0852d';
@@ -80,7 +82,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     fiatAmountInCents: 200, // 2.00 USD in cents
     frequency: 2 * DAY,
     numberOfPayments: 10,
-    startTimestamp: Math.floor(Date.now() / 1000) + DAY,
+    startTimestamp: Math.floor(Date.now() / 1000),
     treasuryAddress: treasuryAddress,
     trialPeriod: 0
   };
@@ -168,15 +170,6 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
   });
 
-  const transferEthersToSmartContract = async (ethers, fromAccount, smartContract) => {
-    await smartContract.sendTransaction(
-      {
-        from: fromAccount,
-        value: ethers * ONE_ETHER
-      }
-    );
-  };
-
   describe('Deploying', async () => {
     it('PumaPay Pull Payment owner should be the address that was specified on contract deployment', async () => {
       const accountOwner = await pumaPayPullPayment.owner();
@@ -200,13 +193,14 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Add executor', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
 
     it('should set the executor specified to true', async () => {
-      await pumaPayPullPayment.addExecutor(executorOne, {
-        from: owner
-      });
+      await pumaPayPullPayment.addExecutor(executorOne,
+        {
+          from: owner
+        });
       const executor = await pumaPayPullPayment.executors(executorOne);
 
       assert.equal(executor, true);
@@ -220,7 +214,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
       const expectedBalance = web3.utils.fromWei(String(executorBalanceAfter), 'ether') - web3.utils.fromWei(String(executorBalanceBefore), 'ether');
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(String(expectedBalance), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
     });
 
     it('should revert when the executor is a ZERO address', async () => {
@@ -257,7 +251,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Remove executor', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
 
     beforeEach('add an executor', async () => {
@@ -302,7 +296,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Register Single Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -412,6 +406,37 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       singlePullPayment.currency = 'EUR';
     });
 
+    it('should revert when the payment already exists', async () => {
+      const signature = await calcSignedMessageForRegistrationV2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
+        [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
+        singlePullPayment.currency,
+        {
+          from: executorOne
+        });
+
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
+        [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
+        singlePullPayment.currency,
+        {
+          from: executorOne
+        }));
+    });
+
     it('should emit a "LogPaymentRegistered" event', async () => {
       const signature = await calcSignedMessageForRegistrationV2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
@@ -473,7 +498,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Register Recurring Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorTwo, {
@@ -570,7 +595,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE, recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -604,7 +629,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE, recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -619,7 +644,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE, recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -725,7 +750,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Register Recurring Pull Payment with Initial Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorTwo, {
@@ -835,7 +860,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -871,7 +897,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -881,7 +908,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments - 1 ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -901,7 +929,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithInitialAmount.client,
         recurringWithInitialAmount.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithInitialAmount.numberOfPayments - 2 ],
         {
           from: recurringWithInitialAmount.pullPaymentExecutorAddress
         }
@@ -1007,7 +1036,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Register Recurring Pull Payment with Free Trial', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorTwo, {
@@ -1092,7 +1121,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringWithFreeTrial.client,
         recurringWithFreeTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithFreeTrial.numberOfPayments ],
         {
           from: recurringWithFreeTrial.pullPaymentExecutorAddress
         }
@@ -1128,7 +1158,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringWithFreeTrial.client,
           recurringWithFreeTrial.paymentID,
-          USD_EXCHANGE_RATE,
+          [ USD_EXCHANGE_RATE,
+            recurringWithFreeTrial.numberOfPayments - i ],
           {
             from: recurringWithFreeTrial.pullPaymentExecutorAddress
           }
@@ -1148,7 +1179,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithFreeTrial.client,
         recurringWithFreeTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithFreeTrial.numberOfPayments - recurringWithFreeTrial.numberOfPayments ],
         {
           from: recurringWithFreeTrial.pullPaymentExecutorAddress
         }
@@ -1177,7 +1209,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithFreeTrial.client,
         recurringWithFreeTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithFreeTrial.numberOfPayments ],
         {
           from: recurringWithFreeTrial.pullPaymentExecutorAddress
         }
@@ -1251,7 +1284,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Register Recurring Pull Payment with Paid Trial', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorTwo, {
@@ -1363,7 +1396,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringWithPaidTrial.client,
           recurringWithPaidTrial.paymentID,
-          EUR_EXCHANGE_RATE,
+          [ EUR_EXCHANGE_RATE,
+            recurringWithPaidTrial.numberOfPayments - i ],
           {
             from: recurringWithPaidTrial.pullPaymentExecutorAddress
           }
@@ -1384,7 +1418,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithPaidTrial.client,
         recurringWithPaidTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithPaidTrial.numberOfPayments - recurringWithPaidTrial.numberOfPayments ],
         {
           from: recurringWithPaidTrial.pullPaymentExecutorAddress
         }
@@ -1413,7 +1448,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringWithPaidTrial.client,
         recurringWithPaidTrial.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringWithPaidTrial.numberOfPayments ],
         {
           from: recurringWithPaidTrial.pullPaymentExecutorAddress
         }
@@ -1518,7 +1554,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Cancel Recurring Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1638,7 +1674,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Execute pull payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(1, deployerAccount, pumaPayPullPayment);
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('add executors', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1672,7 +1708,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1692,7 +1729,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1710,7 +1748,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1727,7 +1766,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1744,7 +1784,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1757,7 +1798,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringPullPayment.client,
           recurringPullPayment.paymentID,
-          EUR_EXCHANGE_RATE,
+          [ EUR_EXCHANGE_RATE,
+            recurringPullPayment.numberOfPayments - ( i + 2 ) ],
           {
             from: recurringPullPayment.pullPaymentExecutorAddress
           }
@@ -1775,7 +1817,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - recurringPullPayment.numberOfPayments ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1787,7 +1830,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1813,7 +1857,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         await pumaPayPullPayment.executePullPayment(
           recurringPullPayment.client,
           recurringPullPayment.paymentID,
-          EUR_EXCHANGE_RATE,
+          [ EUR_EXCHANGE_RATE,
+            recurringPullPayment.numberOfPayments - ( i + 2 ) ],
           {
             from: recurringPullPayment.pullPaymentExecutorAddress
           }
@@ -1831,7 +1876,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 6 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1842,7 +1888,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1867,7 +1914,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await assertRevert(pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        USD_EXCHANGE_RATE,
+        [ USD_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1878,7 +1926,8 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const pullPaymentExecution = await pumaPayPullPayment.executePullPayment(
         recurringPullPayment.client,
         recurringPullPayment.paymentID,
-        EUR_EXCHANGE_RATE,
+        [ EUR_EXCHANGE_RATE,
+          recurringPullPayment.numberOfPayments - 1 ],
         {
           from: recurringPullPayment.pullPaymentExecutorAddress
         }
@@ -1900,7 +1949,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Add Executor - Funding', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(2, deployerAccount, pumaPayPullPayment);
+      await transferETH(2, deployerAccount, pumaPayPullPayment.address);
     });
     afterEach('Transfer ETH to owner account', async () => {
       await web3.eth.sendTransaction({
@@ -1910,14 +1959,14 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the owner when its balance is lower than 0.01 ETH', async () => {
+    it('should transfer ETH to the owner when its balance is lower than 0.15 ETH', async () => {
       const ownerBalance = await web3.eth.getBalance(owner);
       const ownerBalanceETH = web3.utils.fromWei(String(ownerBalance), 'ether');
 
       await web3.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: web3.utils.toWei(String(ownerBalanceETH - 0.01))
+        value: web3.utils.toWei(String(ownerBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
       const ownerBalanceBefore = await web3.eth.getBalance(owner);
       const transaction = await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1926,20 +1975,17 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       const txFee = Number(transaction.receipt.gasUsed) * GAS_PRICE;
       const ownerBalanceAfter = await web3.eth.getBalance(owner);
 
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(ownerBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(ownerBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
+      const expectedBalance = web3.utils.toBN(ownerBalanceAfter).sub(web3.utils.toBN(ownerBalanceBefore)).add(web3.utils.toBN(txFee));
       const executor = await pumaPayPullPayment.executors(executorOne);
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
       assert.equal(executor, true);
     });
   });
 
   describe('Remove Executor - Funding', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(2, deployerAccount, pumaPayPullPayment);
+      await transferETH(2, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('Add executor ETH to smart contract', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -1955,14 +2001,14 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       });
     });
 
-    it('should transfer ETH to the owner when its balance is lower than 0.01 ETH', async () => {
+    it('should transfer ETH to the owner when its balance is lower than 0.15 ETH', async () => {
       const ownerBalance = await web3.eth.getBalance(owner);
       const ownerBalanceETH = web3.utils.fromWei(String(ownerBalance), 'ether');
 
       await web3.eth.sendTransaction({
         from: owner,
         to: deployerAccount,
-        value: web3.utils.toWei(String(ownerBalanceETH - 0.01))
+        value: web3.utils.toWei(String(ownerBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const ownerBalanceBefore = await web3.eth.getBalance(owner);
@@ -1973,20 +2019,17 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
       const ownerBalanceAfter = await web3.eth.getBalance(owner);
 
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(ownerBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(ownerBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
+      const expectedBalance = web3.utils.toBN(ownerBalanceAfter).sub(web3.utils.toBN(ownerBalanceBefore)).add(web3.utils.toBN(txFee));
       const executor = await pumaPayPullPayment.executors(executorOne);
 
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
       assert.equal(executor, false);
     });
   });
 
   describe('Register Pull Payment - Funding', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(3, deployerAccount, pumaPayPullPayment);
+      await transferETH(3, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('Add executor ETH to smart contract', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -2005,13 +2048,13 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
         value: 5 * ONE_ETHER
       });
     });
-    it('should transfer ETH to the executor when its balance is lower than 0.01 ETH and register a pull payment', async () => {
+    it('should transfer ETH to the executor when its balance is lower than 0.15 ETH and register a pull payment', async () => {
       const executorBalance = await web3.eth.getBalance(executorOne);
       const executorBalanceETH = web3.utils.fromWei(String(executorBalance), 'ether');
       await web3.eth.sendTransaction({
         from: executorOne,
         to: deployerAccount,
-        value: web3.utils.toWei(String(executorBalanceETH - 0.01))
+        value: web3.utils.toWei(String(executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
@@ -2033,11 +2076,9 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
       const txFee = Number(transaction.receipt.gasUsed) * GAS_PRICE;
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(executorBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(executorBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      const expectedBalance = web3.utils.toBN(executorBalanceAfter).sub(web3.utils.toBN(executorBalanceBefore)).add(web3.utils.toBN(txFee));
+
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
       const ethDate = await currentBlockTime();
       const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress);
@@ -2061,7 +2102,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
   describe('Delete Pull Payment - Funding', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
-      await transferEthersToSmartContract(3, deployerAccount, pumaPayPullPayment);
+      await transferETH(3, deployerAccount, pumaPayPullPayment.address);
     });
     beforeEach('Add executor ETH to smart contract', async () => {
       await pumaPayPullPayment.addExecutor(executorOne, {
@@ -2103,7 +2144,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await web3.eth.sendTransaction({
         from: executorOne,
         to: deployerAccount,
-        value: web3.utils.toWei(String(executorBalanceETH - 0.01))
+        value: web3.utils.toWei(String(executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS))
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
@@ -2122,16 +2163,113 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
 
       const txFee = Number(transaction.receipt.gasUsed) * GAS_PRICE;
       const executorBalanceAfter = await web3.eth.getBalance(executorOne);
-      const expectedBalance =
-        Number(web3.utils.fromWei(String(executorBalanceAfter), 'ether')) -
-        Number(web3.utils.fromWei(String(executorBalanceBefore), 'ether')) +
-        Number(web3.utils.fromWei(String(txFee), 'ether'));
-      assert.equal(String(expectedBalance), web3.utils.fromWei(String(ONE_ETHER), 'ether'));
+      const expectedBalance = web3.utils.toBN(executorBalanceAfter).sub(web3.utils.toBN(executorBalanceBefore)).add(web3.utils.toBN(txFee));
+
+      assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
       const ethDate = await currentBlockTime();
       const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress);
 
       String(activePaymentInArray[ 11 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // CANCEL PAYMENT TS
+    });
+  });
+
+  describe('Overflow checks for pull payment execution', async () => {
+    beforeEach('Transfer ETH to smart contract', async () => {
+      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
+    });
+
+    beforeEach('add an executor', async () => {
+      await pumaPayPullPayment.addExecutor(executorOne, {
+        from: owner
+      });
+    });
+
+    beforeEach('Approve pull payment smart contract with 90 Billion Billions of PMA', async () => {
+      await token.approve(pumaPayPullPayment.address, web3.utils.toWei(( MINTED_TOKENS + '000000000000000000' )), {
+        from: clientTwo
+      });
+    });
+    beforeEach('Issue tokens to client', async () => {
+      const tokens = MINTED_TOKENS + '0000000';
+      await token.mint(clientTwo, tokens, {
+        from: deployerAccount
+      });
+    });
+
+    it('should execute a pull payment of 1 BILLION FIAT with a conversion rate of 1 PMA = 100k EUR', async () => {
+      recurringPullPayment.fiatAmountInCents = 100000000000; // 1 billion in FIAT cents
+      recurringPullPayment.initialConversionRate = DECIMAL_FIXER + '00000'; // 1 PMA = 100k EUR // 10^15
+      const signature = await calcSignedMessageForRegistrationV2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
+        [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
+        recurringPullPayment.currency,
+        {
+          from: executorOne
+        });
+
+      const rate = DECIMAL_FIXER + '00000'; // 1 PMA = 100k EUR // 10^15
+
+      await timeTravel(recurringPullPayment.frequency);
+      await pumaPayPullPayment.executePullPayment(
+        recurringPullPayment.client,
+        recurringPullPayment.paymentID,
+        [ rate,
+          recurringPullPayment.numberOfPayments - 1 ],
+        {
+          from: recurringPullPayment.pullPaymentExecutorAddress
+        });
+
+      const balanceOfTreasuryAfter = await token.balanceOf(treasuryAddress);
+      // 1 PMA = 100k EUR ==> 1 Billion EUR = 10000 PMA
+      // On execution we have two payments that have happened already.
+      // One on registration and another one on execution.
+      // Therefore, the actual PMA amount is 20000
+      Number(balanceOfTreasuryAfter.toString()).should.be.equal(20000 * ONE_ETHER);
+    });
+
+    it('should execute a pull payment of 100k FIAT with a conversion rate of 1 PMA = 0.000001 FIAT', async () => {
+      recurringPullPayment.fiatAmountInCents = 10000000; // 100k FIAT in cents
+      recurringPullPayment.initialConversionRate = '100000'; // 1 PMA = 0.00001 FIAT // 0.00001 * DECIMAL_FIXER
+      const signature = await calcSignedMessageForRegistrationV2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const sigVRS = await getVRS(signature);
+
+      await pumaPayPullPayment.registerPullPayment(
+        sigVRS.v,
+        sigVRS.r,
+        sigVRS.s,
+        [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
+        [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
+        recurringPullPayment.currency,
+        {
+          from: executorOne
+        });
+
+      const rate = '100000'; // 1 PMA = 0.00001 FIAT // 0.00001 * DECIMAL_FIXER
+
+      await timeTravel(recurringPullPayment.frequency);
+      await pumaPayPullPayment.executePullPayment(
+        recurringPullPayment.client,
+        recurringPullPayment.paymentID,
+        [ rate,
+          recurringPullPayment.numberOfPayments - 1 ],
+        {
+          from: recurringPullPayment.pullPaymentExecutorAddress
+        });
+
+      const balanceOfTreasuryAfter = await token.balanceOf(treasuryAddress);
+      // 1 PMA = 0.00001 EUR ==> 1 EUR = 100000 PMA ==> 100k EUR = 10000000000 PMA
+      Number(balanceOfTreasuryAfter.toString()).should.be.equal(20000000000 * ONE_ETHER);
     });
   });
 });
