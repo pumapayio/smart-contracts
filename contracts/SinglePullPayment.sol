@@ -11,10 +11,12 @@ import "./ownership/PayableOwnable.sol";
 /// the first execution of the pull payment happens as well.
 /// @author PumaPay Dev Team - <developers@pumapay.io>
 contract SinglePullPayment is PayableOwnable {
+
     using SafeMath for uint256;
     /// ===============================================================================================================
     ///                                      Events
     /// ===============================================================================================================
+
     event LogExecutorAdded(address executor);
     event LogExecutorRemoved(address executor);
     event LogSupportedPaymentTypeAdded(bytes32 paymentType);
@@ -28,6 +30,7 @@ contract SinglePullPayment is PayableOwnable {
         bytes32 businessID,
         string uniqueReferenceID
     );
+
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
@@ -147,7 +150,7 @@ contract SinglePullPayment is PayableOwnable {
     /// @param _addresses - all the relevant addresses for the payment.
     /// @param _paymentAmount - amount in PMA to be transferred to the receiver.
     /// @param _uniqueReferenceID - unique reference ID of the pull payment.
-    function makePullPayment(
+    function registerPullPayment(
         uint8 v,
         bytes32 r,
         bytes32 s,
