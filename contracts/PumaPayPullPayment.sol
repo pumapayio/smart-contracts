@@ -37,7 +37,8 @@ contract PumaPayPullPayment is PayableOwnable {
         bytes32 paymentID,
         bytes32 businessID,
         string uniqueReferenceID,
-        uint256 pmaAmountTransferred
+        uint256 amountInPMA,
+        uint256 conversionRate
     );
 
     /// ===============================================================================================================
@@ -195,7 +196,6 @@ contract PumaPayPullPayment is PayableOwnable {
             _executor.transfer(FUNDING_AMOUNT);
             emit LogSmartContractActorFunded("executor", _executor, now);
         }
-
 
         if (isFundingNeeded(owner())) {
             owner().transfer(FUNDING_AMOUNT);
@@ -412,16 +412,14 @@ contract PumaPayPullPayment is PayableOwnable {
         uint256 amountInPMA;
         address customerAddress = _customerAddress;
         uint256 initialAmountInCents = pullPayments[customerAddress][msg.sender].initialPaymentAmountInCents;
+        string memory currency = pullPayments[customerAddress][msg.sender].currency;
 
         if (initialAmountInCents > 0) {
-            amountInPMA = calculatePMAFromFiat(initialAmountInCents, pullPayments[customerAddress][msg.sender].currency);
+            amountInPMA = calculatePMAFromFiat(initialAmountInCents, currency);
 
             pullPayments[customerAddress][msg.sender].initialPaymentAmountInCents = 0;
         } else {
-            amountInPMA = calculatePMAFromFiat(
-                pullPayments[customerAddress][msg.sender].fiatAmountInCents,
-                pullPayments[customerAddress][msg.sender].currency
-            );
+            amountInPMA = calculatePMAFromFiat(pullPayments[customerAddress][msg.sender].fiatAmountInCents, currency);
 
             pullPayments[customerAddress][msg.sender].nextPaymentTimestamp =
             pullPayments[customerAddress][msg.sender].nextPaymentTimestamp + pullPayments[customerAddress][msg.sender].frequency;
@@ -440,7 +438,8 @@ contract PumaPayPullPayment is PayableOwnable {
             pullPayments[customerAddress][msg.sender].paymentID,
             pullPayments[customerAddress][msg.sender].businessID,
             pullPayments[customerAddress][msg.sender].uniqueReferenceID,
-            amountInPMA
+            amountInPMA,
+            conversionRates[currency]
         );
     }
 
