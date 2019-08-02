@@ -8,3 +8,4 @@ unified
 /test-*
 .idea/
 allFiredEvents
+.DS_Store
