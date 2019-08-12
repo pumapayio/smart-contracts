@@ -4,11 +4,11 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./ownership/PayableOwnable.sol";
 
-// TODO: update comments
-/// @title PumaPay Pull Payment V2.0 - Contract that facilitates our pull payment protocol
-/// V2.0 of the protocol removes the rates being set globally on the smart contract and it allows to pass the rate on
-/// pull payment registration and pull payment execution. In addition, when a registration of a pull payment takes place
-/// the first execution of the pull payment happens as well.
+/// @title PumaPay Single Pull Payment - Contract that facilitates our pull payment protocol
+/// The single pull payment smart contract allows for the amount to be defined in PMA rather than in FIAT.
+/// This optimization reduces the gas costs that we had in place for the calculation of PMA amount from FIAT
+/// compared to the previous versions of our smart contracts (v1 and v2). Also, we don't need to worry about PMA/FIAT rates
+/// on the blockchain anymore since we are taking care of that on the wallet side by having the user signing the amount of PMA directly.
 /// @author PumaPay Dev Team - <developers@pumapay.io>
 contract SinglePullPayment is PayableOwnable {
 
@@ -19,10 +19,8 @@ contract SinglePullPayment is PayableOwnable {
 
     event LogExecutorAdded(address executor);
     event LogExecutorRemoved(address executor);
-    event LogSupportedPaymentTypeAdded(bytes32 paymentType);
-    event LogSupportedPaymentTypeRemoved(bytes32 paymentType);
 
-    event LogPaymentPulled(
+    event LogPullPaymentExecuted(
         address customerAddress,
         address receiverAddress,
         uint256 amountInPMA,
@@ -107,8 +105,6 @@ contract SinglePullPayment is PayableOwnable {
     /// ===============================================================================================================
 
     /// @dev Adds a new executor. - can be executed only by the owner.
-    /// When adding a new executor 0.5 ETH is transferred to allow the executor to pay for gas.
-    /// The balance of the owner is also checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function addExecutor(address payable _executor)
     public
@@ -122,7 +118,6 @@ contract SinglePullPayment is PayableOwnable {
     }
 
     /// @dev Removes a new executor. - can be executed only by the owner.
-    /// The balance of the owner is checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function removeExecutor(address payable _executor)
     public
@@ -142,7 +137,8 @@ contract SinglePullPayment is PayableOwnable {
     /// @dev Registers a new pull payment to the PumaPay Pull Payment Contract - The method can be executed only
     /// by one of the executors of the PumaPay Pull Payment Contract.
     /// It creates a new pull payment in the 'pullPayments' mapping and it transfers the amount
-    /// Emits 'LogPaymentPulled' with customer address, pull payment executor address and paymentID.
+    /// It also transfer the PMA amount from the customer address to the receiver address.
+    /// Emits 'LogPullPaymentExecuted' with customer address, receiver address, PMA amount, the paymentID, businessID and uniqueReferenceID
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
@@ -190,7 +186,7 @@ contract SinglePullPayment is PayableOwnable {
             _paymentAmount
         );
 
-        emit LogPaymentPulled(
+        emit LogPullPaymentExecuted(
             _addresses[0],
             _addresses[1],
             _paymentAmount,
