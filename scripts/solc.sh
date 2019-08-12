@@ -2,4 +2,4 @@
 
 cd node_modules/truffle
 
-npm install solc@0.5.8
+npm install solc@0.5.10

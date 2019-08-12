@@ -32,7 +32,7 @@ start_ganache() {
   local gasLimit=0xfffffffffff
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    npx ganache-cli-coverage --emitFreeLogs true --allowUnlimitedContractSize true --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
+    npx testrpc-sc --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
   else
     npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
   fi
@@ -62,5 +62,5 @@ if [ "$SOLIDITY_COVERAGE" = true ]; then
     cat coverage/lcov.info | npx coveralls
   fi
 else
-  npx truffle test "$@" --network ganache
+  node $NODE_DEBUG_OPTION node_modules/.bin/truffle test --network ganache
 fi
