@@ -40,8 +40,9 @@ contract PumaPayPullPaymentV2 is PayableOwnable {
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
+
     uint256 constant private RATE_CALCULATION_NUMBER = 10 ** 26;    /// Check `calculatePMAFromFiat()` for more details
-    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;   /// 1e^20 - Prevent numeric overflows
+    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
     /// @dev The following variables are not needed any more, but are kept hre for clarity on the calculation that
     /// is being done for the PMA to Fiat from rate.
     /// uint256 constant private DECIMAL_FIXER = 10 ** 10; /// 1e^10 - This transforms the Rate from decimals to uint256

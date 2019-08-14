@@ -45,7 +45,7 @@ contract SinglePullPayment is PayableOwnable {
     struct PullPayment {
         bytes32[2] paymentDetails;              /// [0] paymentID / [1] businessID
         uint256 paymentAmount;                  /// payment amount in fiat in cents
-        address customerAddress;                /// address which pma tokens will be transfer to on execution
+        address customerAddress;                /// wallet address of customer
         address receiverAddress;                /// address which pma tokens will be transfer to on execution
         string uniqueReferenceID;
     }
