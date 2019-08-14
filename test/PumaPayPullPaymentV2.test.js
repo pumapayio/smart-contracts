@@ -3,9 +3,9 @@ const {transferETH} = require('./helpers/tranfserHelper');
 const {timeTravel, currentBlockTime} = require('./helpers/timeHelper');
 const {
   calcSignedMessageForRegistrationV2,
-  calcSignedMessageForDeletion,
+  calcSignedMessageForDeletionV2,
   getVRS
-} = require('./helpers/signatureCalculator');
+} = require('./helpers/signatureHelpers');
 const PumaPayToken = artifacts.require('MockMintableToken');
 
 const PumaPayPullPayment = artifacts.require('PumaPayPullPaymentV2');
@@ -1584,7 +1584,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
 
     it('should set the cancel date of the pull payment for the paymentExecutorOne to NOW', async () => {
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.deletePullPayment(
@@ -1603,7 +1603,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1618,7 +1618,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
 
     it('should revert when the payment for the beneficiary does not exists', async () => {
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1633,7 +1633,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
 
     it('should revert when the deletion pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1648,7 +1648,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPaymentCancelled" event', async () => {
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentDeletion = await pumaPayPullPayment.deletePullPayment(
@@ -1841,7 +1841,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       await timeTravel(4 * recurringPullPayment.frequency + 1);
 
       // customer cancel the pull payment
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       await pumaPayPullPayment.deletePullPayment(
         sigVRS.v,
@@ -1897,7 +1897,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
     });
 
     it('should fail when pull payment was cancelled', async () => {
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.deletePullPayment(
@@ -2148,7 +2148,7 @@ contract('PumaPay Pull Payment V2 Contract', async (accounts) => {
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
-      const signature = await calcSignedMessageForDeletion(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await calcSignedMessageForDeletionV2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const transaction = await pumaPayPullPayment.deletePullPayment(

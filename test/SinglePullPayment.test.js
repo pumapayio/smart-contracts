@@ -1,10 +1,10 @@
 const {assertRevert} = require('./helpers/assertionHelper');
 const {
-  calcSignedMessageForRegistration,
+  calcSignedMessageForRegistrationV1,
   calcSignedMessageForRegistrationV2,
   calcSignedMessageToMakeSinglePullPayment,
   getVRS
-} = require('./helpers/signatureCalculator');
+} = require('./helpers/signatureHelpers');
 const PumaPayToken = artifacts.require('MockMintableToken');
 
 const PumaPayPullPayment = artifacts.require('SinglePullPayment');
@@ -471,7 +471,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       await token.approve(pumaPayPullPayment.address, MINTED_TOKENS, {
         from: clientOne
       });
-      const signature = await calcSignedMessageForRegistration(singlePullPayment, CLIENT_PRIVATE_KEY);
+      const signature = await calcSignedMessageForRegistrationV1(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.makePullPayment(
