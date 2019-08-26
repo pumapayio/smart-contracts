@@ -31,8 +31,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
   const clientOne = accounts[ 3 ];
   const treasuryAddress = accounts[ 4 ];
 
-  let token;
-  let pumaPayPullPayment;
+
 
   let singlePullPayment = {
     paymentID: web3.utils.padRight(web3.utils.fromAscii('paymentID_1'), 64),
@@ -191,7 +190,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await pumaPayPullPayment.makePullPayment(
+      await pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -217,7 +216,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await pumaPayPullPayment.makePullPayment(
+      await pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -233,14 +232,14 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
 
       String(treasuryBalanceAfter).should.be.equal(String(singlePullPayment.amountInPMA));
     });
-    it('should emit a "LogPaymentPulled" event', async () => {
+    it('should emit a "LogPullPaymentExecuted" event', async () => {
       await token.approve(pumaPayPullPayment.address, MINTED_TOKENS, {
         from: clientOne
       });
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      const pullPaymentResult = await pumaPayPullPayment.makePullPayment(
+      const pullPaymentResult = await pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -255,7 +254,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const logs = pullPaymentResult.logs;
 
       assert.equal(logs.length, 1);
-      assert.equal(logs[ 0 ].event, 'LogPaymentPulled');
+      assert.equal(logs[ 0 ].event, 'LogPullPaymentExecuted');
       logs[ 0 ].args.customerAddress.should.be.equal(singlePullPayment.client);
       logs[ 0 ].args.receiverAddress.should.be.equal(singlePullPayment.treasuryAddress);
       String(logs[ 0 ].args.amountInPMA).should.be.equal(String(singlePullPayment.amountInPMA));
@@ -270,7 +269,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -290,7 +289,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -312,7 +311,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -334,7 +333,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -357,7 +356,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -380,7 +379,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -402,7 +401,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -423,7 +422,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await pumaPayPullPayment.makePullPayment(
+      await pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -434,7 +433,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
         {
           from: executor
         });
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -454,7 +453,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const sigVRS = await getVRS(signature);
       singlePullPayment.amountInPMA = '11111111111';
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -474,7 +473,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageForRegistrationV1(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -494,7 +493,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageForRegistrationV2(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -511,7 +510,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       const signature = await calcSignedMessageToMakeSinglePullPayment(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await assertRevert(pumaPayPullPayment.makePullPayment(
+      await assertRevert(pumaPayPullPayment.registerPullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
