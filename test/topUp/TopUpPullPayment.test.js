@@ -1,13 +1,13 @@
-const {assertRevert} = require('./helpers/assertionHelper');
+const {assertRevert} = require('../helpers/assertionHelper');
 const {
   calcSignedMessageForTopUpRegistration,
   calcSignedMessageForTopUpCancellation,
   getVRS
-} = require('./helpers/signatureHelpers');
-const {topUpErrors} = require('./helpers/errorHelpers');
-const {transferETH} = require('./helpers/tranfserHelper');
-const {compareBigNumbers} = require('./helpers/comparisonHelper');
-const {timeTravel, currentBlockTime} = require('./helpers/timeHelper');
+} = require('../helpers/signatureHelpers');
+const {topUpErrors} = require('../helpers/errorHelpers');
+const {transferETH} = require('../helpers/tranfserHelper');
+const {compareBigNumbers} = require('../helpers/comparisonHelper');
+const {timeTravel, currentBlockTime} = require('../helpers/timeHelper');
 
 const PumaPayToken = artifacts.require('MockMintableToken');
 const PumaPayPullPayment = artifacts.require('TopUpPullPayment');
@@ -38,8 +38,6 @@ const GAS_PRICE = 1000000000;
 const INITIAL_PAYMENT_AMOUNT = 1000; // 10.00 FIAT
 const TOP_UP_AMOUNT = 500; // 5.00 FIAT
 const TOTAL_LIMIT = 10000; // 100 FIAT
-const TIME_BASED_LIMIT = 2000; // 20 FIAT
-const TIME_BASED_PERIOD = DAY;
 
 const CLIENT_PRIVATE_KEY = '0xc929da34af736b0f97ed3622980d8af51f762188f12e575f46fccdcf687ced66';
 
@@ -66,13 +64,10 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     initialPaymentAmountInCents: INITIAL_PAYMENT_AMOUNT,
     topUpAmountInCents: TOP_UP_AMOUNT,
     startTimestamp: Math.floor(Date.now() / 1000),
-    totalLimit: TOTAL_LIMIT,
-    timeBasedLimit: TIME_BASED_LIMIT,
-    timeBasedPeriod: TIME_BASED_PERIOD
+    totalLimit: TOTAL_LIMIT
   };
 
   const numberOfTotalAllowedTopUps = Math.floor(( topUpPayment.totalLimit / topUpPayment.topUpAmountInCents ));
-  const numberOfTimeBasedAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
 
   const prepareSmartContract = async () => {
     await token.approve(pumaPayPullPayment.address, MINTED_TOKENS, {
@@ -95,8 +90,8 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       [ topUpPayment.paymentID, topUpPayment.businessID ],
       [ topUpPayment.customerAddress, topUpPayment.pullPaymentExecutorAddress, topUpPayment.treasuryAddress ],
       [
-        topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents, topUpPayment.topUpAmountInCents,
-        topUpPayment.startTimestamp, topUpPayment.totalLimit, topUpPayment.timeBasedLimit, topUpPayment.timeBasedPeriod
+        topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents,
+        topUpPayment.topUpAmountInCents, topUpPayment.startTimestamp, topUpPayment.totalLimit
       ],
       topUpPayment.currency,
       {
@@ -121,8 +116,8 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
         [ topUpPayment.paymentID, topUpPayment.businessID ],
         [ topUpPayment.customerAddress, topUpPayment.pullPaymentExecutorAddress, topUpPayment.treasuryAddress ],
         [
-          topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents, topUpPayment.topUpAmountInCents,
-          topUpPayment.startTimestamp, topUpPayment.totalLimit, topUpPayment.timeBasedLimit, topUpPayment.timeBasedPeriod
+          topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents,
+          topUpPayment.topUpAmountInCents, topUpPayment.startTimestamp, topUpPayment.totalLimit
         ],
         topUpPayment.currency,
         {
@@ -222,7 +217,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
 
       const ethDate = await currentBlockTime();
       const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
-      const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
 
       pullPaymentInArray.currency.should.be.equal(topUpPayment.currency);
       pullPaymentInArray.customerAddress.should.be.equal(topUpPayment.customerAddress);
@@ -237,11 +231,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       compareBigNumbers(pullPaymentInArray.totalLimit, topUpPayment.totalLimit);
       compareBigNumbers(pullPaymentInArray.cancelTimestamp, 0);
       compareBigNumbers(pullPaymentInArray.totalSpent, 0);
-      // Time based checks
-      compareBigNumbers(timeBasedLimitsInArray.limit, topUpPayment.timeBasedLimit);
-      compareBigNumbers(timeBasedLimitsInArray.period, topUpPayment.timeBasedPeriod);
-      compareBigNumbers(timeBasedLimitsInArray.spent, 0);
-      compareBigNumbers(timeBasedLimitsInArray.setTimestamp, 0);
     });
 
     it('should transfer the PMA for the initial payment', async () => {
@@ -266,8 +255,8 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
           [ topUpPayment.paymentID, topUpPayment.businessID ],
           [ topUpPayment.customerAddress, topUpPayment.pullPaymentExecutorAddress, topUpPayment.treasuryAddress ],
           [
-            topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents, topUpPayment.topUpAmountInCents,
-            topUpPayment.startTimestamp, topUpPayment.totalLimit, topUpPayment.timeBasedLimit, topUpPayment.timeBasedPeriod
+            topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents,
+            topUpPayment.topUpAmountInCents, topUpPayment.startTimestamp, topUpPayment.totalLimit
           ],
           topUpPayment.currency,
           {
@@ -289,8 +278,8 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
           [ topUpPayment.paymentID, topUpPayment.businessID ],
           [ topUpPayment.customerAddress, topUpPayment.pullPaymentExecutorAddress, topUpPayment.treasuryAddress ],
           [
-            topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents, topUpPayment.topUpAmountInCents,
-            topUpPayment.startTimestamp, topUpPayment.totalLimit, topUpPayment.timeBasedLimit, topUpPayment.timeBasedPeriod
+            topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents,
+            topUpPayment.topUpAmountInCents, topUpPayment.startTimestamp, topUpPayment.totalLimit
           ],
           topUpPayment.currency,
           {
@@ -344,18 +333,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     it('should revert if total limit is too high', async () => {
       await registerForRevert('totalLimit', OVERFLOW_CHECK, topUpErrors.higherThanOverflow);
     });
-    it('should revert if time based limit is zero', async () => {
-      await registerForRevert('timeBasedLimit', 0, topUpErrors.lessThanZero);
-    });
-    it('should revert if time based limit is too high', async () => {
-      await registerForRevert('timeBasedLimit', OVERFLOW_CHECK, topUpErrors.higherThanOverflow);
-    });
-    it('should revert if time based period is zero', async () => {
-      await registerForRevert('timeBasedPeriod', 0, topUpErrors.lessThanZero);
-    });
-    it('should revert if time based period is too high', async () => {
-      await registerForRevert('timeBasedPeriod', OVERFLOW_CHECK, topUpErrors.higherThanOverflow);
-    });
     it('should revert if the currency is empty', async () => {
       await registerForRevert('currency', '', topUpErrors.emptyString);
     });
@@ -372,8 +349,8 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
           [ topUpPayment.paymentID, topUpPayment.businessID ],
           [ topUpPayment.customerAddress, topUpPayment.pullPaymentExecutorAddress, topUpPayment.treasuryAddress ],
           [
-            topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents, anotherTopUpAmount,
-            topUpPayment.startTimestamp, topUpPayment.totalLimit, topUpPayment.timeBasedLimit, topUpPayment.timeBasedPeriod
+            topUpPayment.initialConversionRate, topUpPayment.initialPaymentAmountInCents,
+            anotherTopUpAmount, topUpPayment.startTimestamp, topUpPayment.totalLimit
           ],
           topUpPayment.currency,
           {
@@ -451,25 +428,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
 
       compareBigNumbers(pullPaymentInArray.totalSpent, topUpPayment.topUpAmountInCents);
-    });
-    it('should update the time based spent', async () => {
-      await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-        from: topUpPayment.pullPaymentExecutorAddress
-      });
-
-      const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-      compareBigNumbers(timeBasedLimitsInArray.spent, topUpPayment.topUpAmountInCents);
-    });
-    it('should update the time based timestamp', async () => {
-      await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-        from: topUpPayment.pullPaymentExecutorAddress
-      });
-
-      const ethDate = await currentBlockTime();
-      const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-      compareBigNumbers(timeBasedLimitsInArray.setTimestamp, ethDate);
     });
     it('should revert if not called by the pull payment executor', async () => {
       await assertRevert(
@@ -549,76 +507,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     });
     it('should fail to execute the top up if the total limits have been reached', async () => {
       for (let i = 0; i < numberOfTotalAllowedTopUps; i++) {
-        // console.log('PAYMENT NO.', i);
-        if (( i ) % ( numberOfTimeBasedAllowedTopUps ) === 0) {
-          // console.log('time traveling...', ( topUpPayment.timeBasedPeriod ) / DAY, 'days');
-          await timeTravel(topUpPayment.timeBasedPeriod + 10);
-        }
-
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-
-        // const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
-        // const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-        // console.log('TOTAL SPENT', String(pullPaymentInArray.totalSpent));
-        // console.log('TIME BASED SPENT', String(timeBasedLimitsInArray.spent));
-        // console.log('TIME BASED TS', String(timeBasedLimitsInArray.setTimestamp));
-      }
-
-      await assertRevert(
-        pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        })
-      );
-    });
-  });
-
-  describe('Execute a top up pull payment - TIME BASED LIMITS', () => {
-    beforeEach('prepare smart contracts - approve() & transfer ETH & addExecutor()', async () => {
-      await prepareSmartContract();
-    });
-    it('should allow for top up pull payments if we are below the time based limits', async () => {
-      await registerPullPayment();
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
-      const conversionRate = EUR_EXCHANGE_RATE;
-      for (let i = 0; i < numberOfAllowedTopUps; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, conversionRate, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-      }
-
-      const treasuryBalanceAfter = await token.balanceOf(topUpPayment.treasuryAddress);
-      const expectedAmountOfPmaTransferredOnRegistration =
-        web3.utils.toWei(String(
-          DECIMAL_FIXER * topUpPayment.initialPaymentAmountInCents / topUpPayment.initialConversionRate / FIAT_TO_CENT_FIXER)
-        );
-      const expectedAmountOfPmaTransferredOnExecution =
-        web3.utils.toWei(String(
-          numberOfAllowedTopUps * DECIMAL_FIXER * topUpPayment.topUpAmountInCents / conversionRate / FIAT_TO_CENT_FIXER)
-        );
-      const totalPmaTransferred = web3.utils.toBN(expectedAmountOfPmaTransferredOnRegistration).add(web3.utils.toBN(expectedAmountOfPmaTransferredOnExecution));
-
-      compareBigNumbers(treasuryBalanceAfter, totalPmaTransferred);
-    });
-    it('should update the time based spent amount', async () => {
-      await registerPullPayment();
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
-
-      for (let i = 0; i < numberOfAllowedTopUps; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-        const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-        compareBigNumbers(timeBasedLimitsInArray.spent, ( ( i + 1 ) * topUpPayment.topUpAmountInCents ));
-      }
-    });
-    it('should revert if the time based limit is reached', async () => {
-      await registerPullPayment();
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
-
-      for (let i = 0; i < numberOfAllowedTopUps; i++) {
         await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
           from: topUpPayment.pullPaymentExecutorAddress
         });
@@ -629,94 +517,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
           from: topUpPayment.pullPaymentExecutorAddress
         })
       );
-    });
-    it('should update the time based set timestamp when the next top up is after the period set by the customer', async () => {
-      await registerPullPayment();
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
-
-      for (let i = 0; i < numberOfAllowedTopUps - 1; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-      }
-      timeTravel(topUpPayment.timeBasedPeriod + 1);
-      await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-        from: topUpPayment.pullPaymentExecutorAddress
-      });
-
-      const ethDate = await currentBlockTime();
-      const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-      compareBigNumbers(timeBasedLimitsInArray.setTimestamp, ethDate);
-    });
-    it('should update the time based spent amount when the next top up is after the period set by the customer', async () => {
-      await registerPullPayment();
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
-
-      for (let i = 0; i < numberOfAllowedTopUps - 2; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-      }
-      timeTravel(topUpPayment.timeBasedPeriod + 1);
-      await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-        from: topUpPayment.pullPaymentExecutorAddress
-      });
-
-      const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-      compareBigNumbers(timeBasedLimitsInArray.spent, topUpPayment.topUpAmountInCents);
-    });
-    it('should transfer correct amount when the next top up is after the period set by the customer', async () => {
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
-      const numberOfTopUpsNotExecuted = Math.floor(( numberOfAllowedTopUps / 2 ));
-      let totalNumberOfTopUps = 0;
-
-      await registerPullPayment();
-      for (let i = 0; i < numberOfAllowedTopUps - numberOfTopUpsNotExecuted; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-        totalNumberOfTopUps++;
-      }
-      timeTravel(topUpPayment.timeBasedPeriod + 1);
-      for (let i = 0; i < numberOfAllowedTopUps - numberOfTopUpsNotExecuted; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-        totalNumberOfTopUps++;
-      }
-
-      const treasuryBalanceAfter = await token.balanceOf(topUpPayment.treasuryAddress);
-      const expectedAmountOfPmaTransferredOnRegistration =
-        web3.utils.toWei(String(DECIMAL_FIXER * topUpPayment.initialPaymentAmountInCents / USD_EXCHANGE_RATE / FIAT_TO_CENT_FIXER));
-      const expectedAmountOfPmaTransferredOnExecution =
-        web3.utils.toWei(String(totalNumberOfTopUps * DECIMAL_FIXER * topUpPayment.topUpAmountInCents / EUR_EXCHANGE_RATE / FIAT_TO_CENT_FIXER));
-      const totalPmaTransferred = web3.utils.toBN(expectedAmountOfPmaTransferredOnRegistration).add(web3.utils.toBN(expectedAmountOfPmaTransferredOnExecution));
-
-      compareBigNumbers(treasuryBalanceAfter, totalPmaTransferred);
-    });
-    it('should update the set timestamp when the next top up is after the period set by the customer', async () => {
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
-      const numberOfTopUpsNotExecuted = Math.floor(( numberOfAllowedTopUps / 2 ));
-      let totalNumberOfTopUps = numberOfAllowedTopUps - numberOfTopUpsNotExecuted;
-
-      await registerPullPayment();
-      for (let i = 0; i < totalNumberOfTopUps; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-      }
-      timeTravel(topUpPayment.timeBasedPeriod + 1);
-      for (let i = 0; i < totalNumberOfTopUps; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-      }
-
-      const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-      compareBigNumbers(timeBasedLimitsInArray.spent, ( totalNumberOfTopUps * topUpPayment.topUpAmountInCents ));
     });
   });
 
@@ -814,20 +614,9 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     it('should be able to execute a pull payment when the total limit is increased', async () => {
       // 1: Reach the limit
       for (let i = 0; i < numberOfTotalAllowedTopUps; i++) {
-        // console.log('PAYMENT NO.', i);
-        if (( i ) % ( numberOfTimeBasedAllowedTopUps ) === 0) {
-          // console.log('time traveling...', ( topUpPayment.timeBasedPeriod ) / DAY, 'days');
-          await timeTravel(topUpPayment.timeBasedPeriod + 10);
-        }
-
         await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
           from: topUpPayment.pullPaymentExecutorAddress
         });
-        // const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
-        // const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-        // console.log('TOTAL SPENT', String(pullPaymentInArray.totalSpent));
-        // console.log('TIME BASED SPENT', String(timeBasedLimitsInArray.spent));
-        // console.log('TIME BASED TS', String(timeBasedLimitsInArray.setTimestamp));
       }
 
       // 2: Make sure the execution won't happen if the total limit is reached
@@ -842,9 +631,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await pumaPayPullPayment.updateTotalLimit(topUpPayment.paymentID, newLimit, {
         from: topUpPayment.customerAddress
       });
-      // 4: Time travel for a day to pass the time based limit
-      await timeTravel(topUpPayment.timeBasedPeriod + 10);
-      // 5: Execution must happen
+      // 4: Execution must happen
       const treasuryBalanceBefore = await token.balanceOf(topUpPayment.treasuryAddress);
 
       await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
@@ -861,24 +648,12 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     it('should not allow for a pull payment to be executed when the limit is decreased', async () => {
       // 1: Execute multiple pull payments
       for (let i = 0; i < numberOfTotalAllowedTopUps; i++) {
-        // console.log('PAYMENT NO.', i);
-        if (( i ) % ( numberOfTimeBasedAllowedTopUps ) === 0) {
-          // console.log('time traveling...', ( topUpPayment.timeBasedPeriod ) / DAY, 'days');
-          await timeTravel(topUpPayment.timeBasedPeriod + 10);
-        }
-
         await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
           from: topUpPayment.pullPaymentExecutorAddress
         });
-
-        // const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
-        // const timeBasedLimitsInArray = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-        // console.log('TOTAL SPENT', String(pullPaymentInArray.totalSpent));
-        // console.log('TIME BASED SPENT', String(timeBasedLimitsInArray.spent));
-        // console.log('TIME BASED TS', String(timeBasedLimitsInArray.setTimestamp));
       }
 
-      // 3. The execution should fail
+      // 2. The execution should fail
       await assertRevert(
         pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
           from: topUpPayment.pullPaymentExecutorAddress
@@ -939,306 +714,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     });
   });
 
-  describe('Updating time based limits for payment', () => {
-    beforeEach('prepare smart contracts - approve() & transfer ETH & addExecutor()', async () => {
-      await prepareSmartContract();
-    });
-    beforeEach('register a pull payment', async () => {
-      await registerPullPayment();
-    });
-    it('should update the time based limit for the payment', async () => {
-      const newLimit = 4000; // 40 FIAT
-      await pumaPayPullPayment.updateTimeBasedLimit(topUpPayment.paymentID, newLimit, {
-        from: topUpPayment.customerAddress
-      });
-      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-      compareBigNumbers(timeBasedLimits.limit, newLimit);
-    });
-    it('should execute pull payments when the time based limit is increased', async () => {
-      let spentWithinTimePeriod = 0;
-      // 1: Execute pull payments to reach the time based limit
-      for (let i = 0; i < numberOfTimeBasedAllowedTopUps; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-        spentWithinTimePeriod += topUpPayment.topUpAmountInCents;
-      }
-      // 2: It should revert when time based limits are reached
-      await assertRevert(
-        pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        }),
-        topUpErrors.timeBasedLimitsReached
-      );
-      // 3: Increase time based limit
-      const newLimit = 4000; // 40 FIAT
-      await pumaPayPullPayment.updateTimeBasedLimit(topUpPayment.paymentID, newLimit, {
-        from: topUpPayment.customerAddress
-      });
-
-      // 4: Execution should take place
-      await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-        from: topUpPayment.pullPaymentExecutorAddress
-      });
-      spentWithinTimePeriod += topUpPayment.topUpAmountInCents;
-      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-      compareBigNumbers(timeBasedLimits.spent, spentWithinTimePeriod);
-    });
-    it('should revert if not executed from the customer for that payment', async () => {
-      const newLimit = 4000; // 40 FIAT
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimit(topUpPayment.paymentID, newLimit, {
-          from: topUpPayment.treasuryAddress
-        }),
-        topUpErrors.notCustomer
-      );
-    });
-    it('should revert if the number is zero', async () => {
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimit(topUpPayment.paymentID, 0, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.lessThanZero
-      );
-    });
-    it('should revert if the number is higher than the overflow limit', async () => {
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimit(topUpPayment.paymentID, OVERFLOW_CHECK, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.higherThanOverflow
-      );
-    });
-    it('should revert if the number is lower than the amount spent', async () => {
-
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimit(topUpPayment.paymentID, OVERFLOW_CHECK, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.higherThanOverflow
-      );
-    });
-    it('should emit "LogTimeBasedLimitUpdated" event', async () => {
-      const newLimit = 12000; // 120 FIAT
-      const updateResult = await pumaPayPullPayment.updateTimeBasedLimit(topUpPayment.paymentID, newLimit, {
-        from: topUpPayment.customerAddress
-      });
-
-      const logs = updateResult.logs;
-
-      assert.equal(logs.length, 1);
-      assert.equal(logs[ 0 ].event, 'LogTimeBasedLimitUpdated');
-      logs[ 0 ].args.customerAddress.should.be.equal(topUpPayment.customerAddress);
-      logs[ 0 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
-      compareBigNumbers(logs[ 0 ].args.oldLimit, topUpPayment.timeBasedLimit);
-      compareBigNumbers(logs[ 0 ].args.newLimit, newLimit);
-    });
-  });
-
-  describe('Updating time based period for payment', () => {
-    beforeEach('prepare smart contracts - approve() & transfer ETH & addExecutor()', async () => {
-      await prepareSmartContract();
-    });
-    beforeEach('register a pull payment', async () => {
-      await registerPullPayment();
-    });
-    it('should update the time based period for the payment', async () => {
-      const newPeriod = 2 * DAY; // 2 Days
-      await pumaPayPullPayment.updateTimeBasedPeriod(topUpPayment.paymentID, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-
-      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-      compareBigNumbers(timeBasedLimits.period, newPeriod);
-    });
-    it('should update the time based period for the payment with a high reasonable value i.e. 1 Century', async () => {
-      const newPeriod = 100 * ( 365 * DAY ); // 100 Years
-      await pumaPayPullPayment.updateTimeBasedPeriod(topUpPayment.paymentID, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-
-      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-      compareBigNumbers(timeBasedLimits.period, newPeriod);
-    });
-    it('should execute pull payments when the time based period is decreased', async () => {
-      // 1: Execute pull payments to reach the time based limit
-      for (let i = 0; i < numberOfTimeBasedAllowedTopUps; i++) {
-        await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        });
-      }
-      // 2: It should revert when time based limits are reached
-      await assertRevert(
-        pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-          from: topUpPayment.pullPaymentExecutorAddress
-        }),
-        topUpErrors.timeBasedLimitsReached
-      );
-      // 3: Decrease the time based period
-      const newPeriod = 0.5 * DAY; // 40 FIAT
-      await pumaPayPullPayment.updateTimeBasedPeriod(topUpPayment.paymentID, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-      // 4: Time travel half a day - new time based period
-      await timeTravel(newPeriod + 1);
-      // 4: Execution should take place
-      await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
-        from: topUpPayment.pullPaymentExecutorAddress
-      });
-      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-
-      compareBigNumbers(timeBasedLimits.spent, topUpPayment.topUpAmountInCents);
-    });
-    it('should revert if not executed from the customer for that payment', async () => {
-      const newPeriod = 2 * DAY; // 2 Days
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedPeriod(topUpPayment.paymentID, newPeriod, {
-          from: topUpPayment.treasuryAddress
-        }),
-        topUpErrors.notCustomer
-      );
-    });
-    it('should revert if the period is zero', async () => {
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedPeriod(topUpPayment.paymentID, 0, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.lessThanZero
-      );
-    });
-    it('should revert if the period is higher than the overflow limit', async () => {
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedPeriod(topUpPayment.paymentID, OVERFLOW_CHECK, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.higherThanOverflow
-      );
-    });
-    it('should emit "LogTimeBasedPeriodUpdated" event', async () => {
-      const newPeriod = 2 * DAY; // 2 Days
-      const updateResult = await pumaPayPullPayment.updateTimeBasedPeriod(topUpPayment.paymentID, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-
-      const logs = updateResult.logs;
-
-      assert.equal(logs.length, 1);
-      assert.equal(logs[ 0 ].event, 'LogTimeBasedPeriodUpdated');
-      logs[ 0 ].args.customerAddress.should.be.equal(topUpPayment.customerAddress);
-      logs[ 0 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
-      compareBigNumbers(logs[ 0 ].args.oldPeriod, topUpPayment.timeBasedPeriod);
-      compareBigNumbers(logs[ 0 ].args.newPeriod, newPeriod);
-    });
-  });
-
-  describe('Updating time based limit and period for payment', () => {
-    beforeEach('prepare smart contracts - approve() & transfer ETH & addExecutor()', async () => {
-      await prepareSmartContract();
-    });
-    beforeEach('register a pull payment', async () => {
-      await registerPullPayment();
-    });
-    it('should update the time based period for the payment', async () => {
-      const newLimit = 12000; // 120 FIAT
-      const newPeriod = 2 * DAY; // 2 Days
-
-      await pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, newLimit, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-      compareBigNumbers(timeBasedLimits.period, newPeriod);
-    });
-    it('should update the time based limit for the payment', async () => {
-      const newLimit = 12000; // 120 FIAT
-      const newPeriod = 2 * DAY; // 2 Days
-
-      await pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, newLimit, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
-      compareBigNumbers(timeBasedLimits.limit, newLimit);
-    });
-    it('should revert if not executed from the customer for that payment', async () => {
-      const newLimit = 12000; // 120 FIAT
-      const newPeriod = 2 * DAY; // 2 Days
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, newLimit, newPeriod, {
-          from: topUpPayment.treasuryAddress
-        }),
-        topUpErrors.notCustomer
-      );
-    });
-    it('should revert if the period is zero', async () => {
-      const newLimit = 12000; // 120 FIAT
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, newLimit, 0, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.lessThanZero
-      );
-    });
-    it('should revert if the period is higher than the overflow limit', async () => {
-      const newLimit = 12000; // 120 FIAT
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, newLimit, OVERFLOW_CHECK, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.higherThanOverflow
-      );
-    });
-    it('should revert if the limit is zero', async () => {
-      const newPeriod = 2 * DAY; // 2 Days
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, 0, newPeriod, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.lessThanZero
-      );
-    });
-    it('should revert if the limit is higher than the overflow limit', async () => {
-      const newPeriod = 2 * DAY; // 2 Days
-      await assertRevert(
-        pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, OVERFLOW_CHECK, newPeriod, {
-          from: topUpPayment.customerAddress
-        }),
-        topUpErrors.higherThanOverflow
-      );
-    });
-    it('should emit "LogTimeBasedLimitUpdated" event', async () => {
-      const newLimit = 12000; // 120 FIAT
-      const newPeriod = 2 * DAY; // 2 Days
-      const updateResult = await pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, newLimit, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-
-      const logs = updateResult.logs;
-
-      assert.equal(logs.length, 2);
-      assert.equal(logs[ 0 ].event, 'LogTimeBasedLimitUpdated');
-      logs[ 0 ].args.customerAddress.should.be.equal(topUpPayment.customerAddress);
-      logs[ 0 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
-      compareBigNumbers(logs[ 0 ].args.oldLimit, topUpPayment.timeBasedLimit);
-      compareBigNumbers(logs[ 0 ].args.newLimit, newLimit);
-    });
-    it('should emit "LogTimeBasedPeriodUpdated" event', async () => {
-      const newLimit = 12000; // 120 FIAT
-      const newPeriod = 2 * DAY; // 2 Days
-      const updateResult = await pumaPayPullPayment.updateTimeBasedLimitAndPeriod(topUpPayment.paymentID, newLimit, newPeriod, {
-        from: topUpPayment.customerAddress
-      });
-
-      const logs = updateResult.logs;
-
-      assert.equal(logs.length, 2);
-      assert.equal(logs[ 1 ].event, 'LogTimeBasedPeriodUpdated');
-      logs[ 1 ].args.customerAddress.should.be.equal(topUpPayment.customerAddress);
-      logs[ 1 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
-      compareBigNumbers(logs[ 1 ].args.oldPeriod, topUpPayment.timeBasedPeriod);
-      compareBigNumbers(logs[ 1 ].args.newPeriod, newPeriod);
-    });
-  });
-
   describe('Retrieve limits', async () => {
     let topUpPaymentsExecuted = 0;
     beforeEach('prepare smart contracts - approve() & transfer ETH & addExecutor()', async () => {
@@ -1247,8 +722,8 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     beforeEach('register a pull payment', async () => {
       await registerPullPayment();
     });
-    beforeEach('execute a few pull payments within the time based limits', async () => {
-      const numberOfAllowedTopUps = Math.floor(( topUpPayment.timeBasedLimit / topUpPayment.topUpAmountInCents ));
+    beforeEach('execute a few pull payments within the limits', async () => {
+      const numberOfAllowedTopUps = Math.floor(( topUpPayment.totalLimit / topUpPayment.topUpAmountInCents ));
       const numberOfTopUpsNotExecuted = Math.floor(( numberOfAllowedTopUps / 2 ));
       topUpPaymentsExecuted = numberOfAllowedTopUps - numberOfTopUpsNotExecuted;
 
@@ -1259,33 +734,18 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       }
     });
     it('should return the total limit for the top up billing model based on the payment ID', async () => {
-      const limits = await pumaPayPullPayment.retrieveLimits(topUpPayment.paymentID);
+      const limits = await pumaPayPullPayment.retrieveTotalLimits(topUpPayment.paymentID);
       compareBigNumbers(limits.totalLimit, topUpPayment.totalLimit);
     });
     it('should return the total spent for the top up billing model based on the payment ID', async () => {
-      const limits = await pumaPayPullPayment.retrieveLimits(topUpPayment.paymentID);
+      const limits = await pumaPayPullPayment.retrieveTotalLimits(topUpPayment.paymentID);
       compareBigNumbers(limits.totalSpent, topUpPayment.topUpAmountInCents * topUpPaymentsExecuted);
     });
-    it('should return the time based limit for the top up billing model based on the payment ID', async () => {
-      const limits = await pumaPayPullPayment.retrieveLimits(topUpPayment.paymentID);
-      compareBigNumbers(limits.timeBasedLimit, topUpPayment.timeBasedLimit);
-    });
-    it('should return the time based spent for the top up billing model based on the payment ID', async () => {
-      const limits = await pumaPayPullPayment.retrieveLimits(topUpPayment.paymentID);
-      compareBigNumbers(limits.timeBasedSpent, topUpPayment.topUpAmountInCents * topUpPaymentsExecuted);
-    });
-    it('should return the time based period for the top up billing model based on the payment ID', async () => {
-      const limits = await pumaPayPullPayment.retrieveLimits(topUpPayment.paymentID);
-      compareBigNumbers(limits.timeBasedPeriod, topUpPayment.timeBasedPeriod);
-    });
     it('should return ZERO values if the payment doesn\'t exists', async () => {
-      const limits = await pumaPayPullPayment.retrieveLimits(web3.utils.padRight(web3.utils.fromAscii('OTHER_PAYMENT'), 64));
+      const limits = await pumaPayPullPayment.retrieveTotalLimits(web3.utils.padRight(web3.utils.fromAscii('OTHER_PAYMENT'), 64));
 
       compareBigNumbers(limits.totalLimit, 0);
       compareBigNumbers(limits.totalSpent, 0);
-      compareBigNumbers(limits.timeBasedLimit, 0);
-      compareBigNumbers(limits.timeBasedSpent, 0);
-      compareBigNumbers(limits.timeBasedPeriod, 0);
     });
   });
 

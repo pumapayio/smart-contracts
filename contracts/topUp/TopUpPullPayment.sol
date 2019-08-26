@@ -2,8 +2,9 @@ pragma solidity 0.5.10;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "./ownership/PayableOwnable.sol";
+import "../ownership/PayableOwnable.sol";
 
+/// @dev - TODO: Add some information about the top up billing model.
 contract TopUpPullPayment is PayableOwnable {
     using SafeMath for uint256;
 
@@ -38,30 +39,18 @@ contract TopUpPullPayment is PayableOwnable {
         uint256 oldLimit,
         uint256 newLimit
     );
-    event LogTimeBasedLimitUpdated(
-        address customerAddress,
-        bytes32 paymentID,
-        uint256 oldLimit,
-        uint256 newLimit
-    );
-    event LogTimeBasedPeriodUpdated(
-        address customerAddress,
-        bytes32 paymentID,
-        uint256 oldPeriod,
-        uint256 newPeriod
-    );
 
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
-    uint256 constant private RATE_CALCULATION_NUMBER = 10 ** 26;    /// Check `calculatePMAFromFiat()` for more details
-    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
-    uint256 constant private FIAT_TO_CENT_FIXER = 100;              /// Fiat currencies have 100 cents in 1 basic monetary unit.
+    uint256 constant internal RATE_CALCULATION_NUMBER = 10 ** 26;    /// Check `calculatePMAFromFiat()` for more details
+    uint256 constant internal OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
+    uint256 constant internal FIAT_TO_CENT_FIXER = 100;              /// Fiat currencies have 100 cents in 1 basic monetary unit.
 
-    uint256 constant private ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
-    uint256 constant private FUNDING_AMOUNT = 0.5 ether;                           /// Amount to transfer to owner/executor
-    uint256 constant private MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;     /// min amount of ETH for owner/executor
-    bytes32 constant private EMPTY_BYTES32 = "";
+    uint256 constant internal ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
+    uint256 constant internal FUNDING_AMOUNT = 0.5 ether;                           /// Amount to transfer to owner/executor
+    uint256 constant internal MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;     /// min amount of ETH for owner/executor
+    bytes32 constant internal EMPTY_BYTES32 = "";
 
     /// ===============================================================================================================
     ///                                      Members
@@ -69,7 +58,6 @@ contract TopUpPullPayment is PayableOwnable {
     IERC20 public token;
     mapping(address => bool) public executors;
     mapping(bytes32 => TopUpPayment) public pullPayments;
-    mapping(bytes32 => TimeBasedLimits) public timeBasedLimits;
 
     struct TopUpPayment {
         bytes32[2] paymentIDs;                  /// [0] paymentID / [1] businessID
@@ -85,13 +73,6 @@ contract TopUpPullPayment is PayableOwnable {
         uint256 cancelTimestamp;                /// timestamp the payment was cancelled
         uint256 totalLimit;                     /// total limit that the customer is willing to pay
         uint256 totalSpent;                     /// total amount spent by the customer
-    }
-
-    struct TimeBasedLimits {
-        uint256 limit;                     /// total limit that the customer is willing to pay
-        uint256 spent;                     /// total amount spent by the customer
-        uint256 period;                    /// total amount spent by the customer
-        uint256 setTimestamp;              /// total amount spent by the customer
     }
 
     /// ===============================================================================================================
@@ -116,10 +97,6 @@ contract TopUpPullPayment is PayableOwnable {
     }
     modifier isValidNewTotalLimit(bytes32 _paymentID, uint256 _newAmount) {
         require(_newAmount >= pullPayments[_paymentID].totalSpent, "New total amount is less than the amount spent.");
-        _;
-    }
-    modifier isValidNewTimeBasedLimit(bytes32 _paymentID, uint256 _newAmount) {
-        require(_newAmount >= timeBasedLimits[_paymentID].spent, "New time based amount is less than the amount spent.");
         _;
     }
     modifier isExecutor() {
@@ -231,8 +208,8 @@ contract TopUpPullPayment is PayableOwnable {
     /// @param s - S output of ECDSA signature.
     /// @param _paymentIDs  - [0] paymentID, [1] businessID
     /// @param _addresses   - [0] customer, [1] pull payment executor, [2] treasury
-    /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
-    ///                       [3] start timestamp, [4] total limit, [5] time based limit, [6] time based period
+    /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents,
+    ///                       [2] top up amount in cents, [3] start timestamp, [4] total limit
     /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
     function registerPullPayment(
         uint8 v,
@@ -240,7 +217,7 @@ contract TopUpPullPayment is PayableOwnable {
         bytes32 s,
         bytes32[2] memory _paymentIDs,
         address[3] memory _addresses,
-        uint256[7] memory _numbers,
+        uint256[5] memory _numbers,
         string memory _currency
     )
     public
@@ -260,16 +237,12 @@ contract TopUpPullPayment is PayableOwnable {
         require(_numbers[2] > 0, "Invalid number - Must be higher than zero.");
         require(_numbers[3] > 0, "Invalid number - Must be higher than zero.");
         require(_numbers[4] > 0, "Invalid number - Must be higher than zero.");
-        require(_numbers[5] > 0, "Invalid number - Must be higher than zero.");
-        require(_numbers[6] > 0, "Invalid number - Must be higher than zero.");
 
         require(_numbers[0] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
         require(_numbers[1] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
         require(_numbers[2] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
         require(_numbers[3] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
         require(_numbers[4] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
-        require(_numbers[5] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
-        require(_numbers[6] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
 
         bytes32[2] memory paymentIDs = _paymentIDs;
 
@@ -286,15 +259,11 @@ contract TopUpPullPayment is PayableOwnable {
         pullPayments[paymentIDs[0]].startTimestamp = _numbers[3];
         pullPayments[paymentIDs[0]].totalLimit = _numbers[4];
 
-        timeBasedLimits[paymentIDs[0]].limit = _numbers[5];
-        timeBasedLimits[paymentIDs[0]].period = _numbers[6];
-
         require(isValidRegistration(
                 v,
                 r,
                 s,
-                pullPayments[paymentIDs[0]],
-                timeBasedLimits[paymentIDs[0]]
+                pullPayments[paymentIDs[0]]
             ),
             "Invalid pull payment registration - ECRECOVER_FAILED."
         );
@@ -337,16 +306,6 @@ contract TopUpPullPayment is PayableOwnable {
     returns (bool)
     {
         TopUpPayment storage payment = pullPayments[_paymentID];
-        TimeBasedLimits storage timeBasedLimit = timeBasedLimits[_paymentID];
-
-        if (now > timeBasedLimit.setTimestamp.add(timeBasedLimit.period)) {
-            timeBasedLimit.setTimestamp = now;
-            timeBasedLimit.spent = payment.topUpAmountInCents;
-        } else {
-            timeBasedLimit.spent += payment.topUpAmountInCents;
-        }
-
-        require(timeBasedLimit.spent <= timeBasedLimit.limit, "Time based limit reached.");
 
         uint256 conversionRate = _conversionRate;
         uint256 amountInPMA = calculatePMAFromFiat(payment.topUpAmountInCents, conversionRate);
@@ -415,76 +374,14 @@ contract TopUpPullPayment is PayableOwnable {
         emit LogTotalLimitUpdated(msg.sender, _paymentID, oldLimit, _newLimit);
     }
 
-    /// @dev Method that updates the time based limit for the top up payment
-    /// @param _paymentID - the ID of the payment for which time based limit will be updated
-    /// @param _newLimit - new time based limit in FIAT cents
-    function updateTimeBasedLimit(bytes32 _paymentID, uint256 _newLimit)
-    public
-    isCustomer(_paymentID)
-    isValidNumber(_newLimit)
-    isValidNewTimeBasedLimit(_paymentID, _newLimit)
-    {
-        uint256 oldLimit = timeBasedLimits[_paymentID].limit;
-        timeBasedLimits[_paymentID].limit = _newLimit;
-
-        emit LogTimeBasedLimitUpdated(msg.sender, _paymentID, oldLimit, _newLimit);
-    }
-
-    /// @dev Method that updates the time based period for the top up payment
-    /// @param _paymentID - the ID of the payment for which time based limit will be updated
-    /// @param _newPeriod - new time based period
-    function updateTimeBasedPeriod(bytes32 _paymentID, uint256 _newPeriod)
-    public
-    isCustomer(_paymentID)
-    isValidNumber(_newPeriod)
-    {
-        uint256 oldPeriod = timeBasedLimits[_paymentID].period;
-        timeBasedLimits[_paymentID].period = _newPeriod;
-
-        emit LogTimeBasedPeriodUpdated(msg.sender, _paymentID, oldPeriod, _newPeriod);
-    }
-
-    /// @dev Method that updates the total limit for the top up payment
-    /// @param _paymentID - the ID of the payment for which time based limit and period will be updated
-    /// @param _newLimit - new time based limit in FIAT cents
-    /// @param _newPeriod - new time based period
-    function updateTimeBasedLimitAndPeriod(bytes32 _paymentID, uint256 _newLimit, uint256 _newPeriod)
-    public
-    isCustomer(_paymentID)
-    isValidNumber(_newLimit)
-    isValidNumber(_newPeriod)
-    {
-        uint256 oldLimit = timeBasedLimits[_paymentID].limit;
-        uint256 oldPeriod = timeBasedLimits[_paymentID].period;
-
-        timeBasedLimits[_paymentID].limit = _newLimit;
-        timeBasedLimits[_paymentID].period = _newPeriod;
-
-        emit LogTimeBasedLimitUpdated(msg.sender, _paymentID, oldLimit, _newLimit);
-        emit LogTimeBasedPeriodUpdated(msg.sender, _paymentID, oldPeriod, _newPeriod);
-    }
-
     /// @dev method that retrieves the limits specified on the top up payment
     /// @param _paymentID - ID of the payment
-    function retrieveLimits(bytes32 _paymentID)
+    function retrieveTotalLimits(bytes32 _paymentID)
     public
     view
-    returns
-    (
-        uint256 totalLimit,
-        uint256 totalSpent,
-        uint256 timeBasedLimit,
-        uint256 timeBasedSpent,
-        uint256 timeBasedPeriod
-    )
+    returns (uint256 totalLimit, uint256 totalSpent)
     {
-        return (
-        pullPayments[_paymentID].totalLimit,
-        pullPayments[_paymentID].totalSpent,
-        timeBasedLimits[_paymentID].limit,
-        timeBasedLimits[_paymentID].spent,
-        timeBasedLimits[_paymentID].period
-        );
+        return (pullPayments[_paymentID].totalLimit, pullPayments[_paymentID].totalSpent);
     }
 
     /// ===============================================================================================================
@@ -561,8 +458,7 @@ contract TopUpPullPayment is PayableOwnable {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        TopUpPayment memory _pullPayment,
-        TimeBasedLimits memory _timeBasedLimits
+        TopUpPayment memory _pullPayment
     )
     internal
     pure
@@ -579,9 +475,7 @@ contract TopUpPullPayment is PayableOwnable {
                     _pullPayment.initialPaymentAmountInCents,
                     _pullPayment.topUpAmountInCents,
                     _pullPayment.startTimestamp,
-                    _pullPayment.totalLimit,
-                    _timeBasedLimits.limit,
-                    _timeBasedLimits.period
+                    _pullPayment.totalLimit
                 )
             ),
             v, r, s) == _pullPayment.customerAddress;
@@ -618,7 +512,7 @@ contract TopUpPullPayment is PayableOwnable {
     /// @param _address - address of owner/executors that the balance is checked against.
     /// @return bool    - whether the address needs more ETH.
     function isFundingNeeded(address _address)
-    private
+    internal
     view
     returns (bool) {
         return address(_address).balance <= MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS;
