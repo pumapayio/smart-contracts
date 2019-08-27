@@ -1,7 +1,7 @@
 const {assertRevert} = require('../helpers/assertionHelper');
 const {
-  calcSignedMessageForTimeBasedTopUpRegistration,
-  calcSignedMessageForTimeBasedTopUpCancellation,
+  signTimeBasedTopUpRegistration,
+  signTimeBasedTopUpCancellation,
   getVRS
 } = require('../helpers/signatureHelpers');
 const {topUpErrors} = require('../helpers/errorHelpers');
@@ -85,7 +85,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
   };
 
   const registerPullPayment = async () => {
-    const signature = await calcSignedMessageForTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
+    const signature = await signTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
     const sigVRS = await getVRS(signature);
 
     const result = await pumaPayPullPayment.registerPullPayment(
@@ -110,7 +110,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
     const oldValue = topUpPayment[ parameter ];
     topUpPayment[ parameter ] = wrongValue;
 
-    const signature = await calcSignedMessageForTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
+    const signature = await signTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
     const sigVRS = await getVRS(signature);
 
     await assertRevert(
@@ -134,7 +134,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
   };
 
   const cancelPullPayment = async () => {
-    const signature = await calcSignedMessageForTimeBasedTopUpCancellation(topUpPayment.paymentID, topUpPayment.businessID, CLIENT_PRIVATE_KEY);
+    const signature = await signTimeBasedTopUpCancellation(topUpPayment.paymentID, topUpPayment.businessID, CLIENT_PRIVATE_KEY);
     const sigVRS = await getVRS(signature);
 
     const result = await pumaPayPullPayment.cancelTopUpPayment(
@@ -153,7 +153,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
     const oldValue = topUpPayment[ parameter ];
     topUpPayment[ parameter ] = wrongValue;
 
-    const signature = await calcSignedMessageForTimeBasedTopUpCancellation(topUpPayment.paymentID, topUpPayment.businessID, CLIENT_PRIVATE_KEY);
+    const signature = await signTimeBasedTopUpCancellation(topUpPayment.paymentID, topUpPayment.businessID, CLIENT_PRIVATE_KEY);
     const sigVRS = await getVRS(signature);
 
     await assertRevert(
@@ -255,7 +255,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
     });
 
     it('should revert if not called by one of the executors', async () => {
-      const signature = await calcSignedMessageForTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
+      const signature = await signTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(
@@ -277,7 +277,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
       );
     });
     it('should revert if you try to register the same payment twice', async () => {
-      const signature = await calcSignedMessageForTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
+      const signature = await signTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await registerPullPayment();
@@ -360,7 +360,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
       await registerForRevert('currency', '', topUpErrors.emptyString);
     });
     it('should revert if the signature from the customer doesn\'t match', async () => {
-      const signature = await calcSignedMessageForTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
+      const signature = await signTimeBasedTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       const anotherTopUpAmount = 10000; // 100 FIAT
 
@@ -757,7 +757,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
       );
     });
     it('should revert if not called by an executor', async () => {
-      const signature = await calcSignedMessageForTimeBasedTopUpCancellation(topUpPayment.paymentID, topUpPayment.businessID, CLIENT_PRIVATE_KEY);
+      const signature = await signTimeBasedTopUpCancellation(topUpPayment.paymentID, topUpPayment.businessID, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(

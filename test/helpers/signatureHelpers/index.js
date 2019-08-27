@@ -1,22 +1,25 @@
 const {getVRS} = require('./sigRecovery');
-const {calcSignedMessageForDeletionV1, calcSignedMessageForRegistrationV1} = require('./pullPaymentV1');
-const {calcSignedMessageForDeletionV2, calcSignedMessageForRegistrationV2} = require('./pullPaymentV2');
+const {signDeletionV1, signRegistrationV1} = require('./pullPaymentV1');
+const {signDeletionV2, signRegistrationV2} = require('./pullPaymentV2');
 const {calcSignedMessageToMakeSinglePullPayment} = require('./singlePullPayment');
-const {calcSignedMessageForTimeBasedTopUpRegistration, calcSignedMessageForTimeBasedTopUpCancellation} = require('./topUp/timeBasedTopUpPullPayment');
-const {calcSignedMessageForTopUpRegistration, calcSignedMessageForTopUpCancellation} = require('./topUp/topUpPullPayment');
-const {calcSignedMessageForTopUpWithExpirationRegistration, calcSignedMessageForTopUpWithExpirationCancellation} = require('./topUp/topUpPullPaymentWithExpiration');
+const {signTimeBasedTopUpRegistration, signTimeBasedTopUpCancellation} = require('./topUp/timeBasedTopUpPullPayment');
+const {signTopUpRegistration, signTopUpCancellation} = require('./topUp/topUpPullPayment');
+const {signTopUpWithExpirationRegistration, signTopUpWithExpirationCancellation} = require('./topUp/topUpPullPaymentWithExpiration');
+const {signTimeBasedTopUpWithExpirationRegistration, signTimeBasedTopUpWithExpirationCancellation} = require('./topUp/timeBasedTopUpPullPaymentWithExpiration');
 
 module.exports = {
   getVRS,
-  calcSignedMessageForDeletionV1,
-  calcSignedMessageForDeletionV2,
-  calcSignedMessageForRegistrationV1,
-  calcSignedMessageForRegistrationV2,
+  signDeletionV1,
+  signDeletionV2,
+  signRegistrationV1,
+  signRegistrationV2,
   calcSignedMessageToMakeSinglePullPayment,
-  calcSignedMessageForTopUpRegistration,
-  calcSignedMessageForTopUpCancellation,
-  calcSignedMessageForTimeBasedTopUpRegistration,
-  calcSignedMessageForTimeBasedTopUpCancellation,
-  calcSignedMessageForTopUpWithExpirationRegistration,
-  calcSignedMessageForTopUpWithExpirationCancellation
+  signTopUpRegistration,
+  signTopUpCancellation,
+  signTimeBasedTopUpRegistration,
+  signTimeBasedTopUpCancellation,
+  signTopUpWithExpirationRegistration,
+  signTopUpWithExpirationCancellation,
+  signTimeBasedTopUpWithExpirationRegistration,
+  signTimeBasedTopUpWithExpirationCancellation
 };

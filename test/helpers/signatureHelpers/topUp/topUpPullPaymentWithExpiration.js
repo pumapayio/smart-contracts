@@ -2,7 +2,7 @@ const EthCrypto = require('eth-crypto');
 const Web3 = require('web3');
 const web3 = new Web3('http://localhost:8545');
 
-const calcSignedMessageForTopUpWithExpirationRegistration = async (pullPayment, privateKey) => {
+const signTopUpWithExpirationRegistration = async (pullPayment, privateKey) => {
   const messageHash = web3.utils.soliditySha3(
     {
       type: 'bytes32',
@@ -43,7 +43,7 @@ const calcSignedMessageForTopUpWithExpirationRegistration = async (pullPayment, 
   return signedMessage;
 };
 
-const calcSignedMessageForTopUpWithExpirationCancellation = async (paymentID, businessID, privateKey) => {
+const signTopUpWithExpirationCancellation = async (paymentID, businessID, privateKey) => {
   const messageHash = web3.utils.soliditySha3(
     {
       type: 'bytes32',
@@ -61,6 +61,6 @@ const calcSignedMessageForTopUpWithExpirationCancellation = async (paymentID, bu
 };
 
 module.exports = {
-  calcSignedMessageForTopUpWithExpirationRegistration,
-  calcSignedMessageForTopUpWithExpirationCancellation
+  signTopUpWithExpirationRegistration,
+  signTopUpWithExpirationCancellation
 };

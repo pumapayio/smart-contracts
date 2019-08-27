@@ -1,7 +1,7 @@
 const {assertRevert} = require('./helpers/assertionHelper');
 const {
-  calcSignedMessageForRegistrationV1,
-  calcSignedMessageForRegistrationV2,
+  signRegistrationV1,
+  signRegistrationV2,
   calcSignedMessageToMakeSinglePullPayment,
   getVRS
 } = require('./helpers/signatureHelpers');
@@ -470,7 +470,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       await token.approve(pumaPayPullPayment.address, MINTED_TOKENS, {
         from: clientOne
       });
-      const signature = await calcSignedMessageForRegistrationV1(singlePullPayment, CLIENT_PRIVATE_KEY);
+      const signature = await signRegistrationV1(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -490,7 +490,7 @@ contract('Single Pull Payment Smart Contract', (accounts) => {
       await token.approve(pumaPayPullPayment.address, MINTED_TOKENS, {
         from: clientOne
       });
-      const signature = await calcSignedMessageForRegistrationV2(singlePullPayment, CLIENT_PRIVATE_KEY);
+      const signature = await signRegistrationV2(singlePullPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.registerPullPayment(
