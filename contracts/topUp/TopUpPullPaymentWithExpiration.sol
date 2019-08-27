@@ -376,7 +376,7 @@ contract TopUpPullPayment is PayableOwnable {
 
     /// @dev method that retrieves the limits specified on the top up payment
     /// @param _paymentID - ID of the payment
-    function retrieveLimits(bytes32 _paymentID)
+    function retrieveTotalLimits(bytes32 _paymentID)
     public
     view
     returns (uint256 totalLimit, uint256 totalSpent)

@@ -429,6 +429,16 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
 
       compareBigNumbers(pullPaymentInArray.totalSpent, topUpPayment.topUpAmountInCents);
     });
+    it('should execute even if called after 100 years', async () => {
+      await timeTravel(100 * 365 * DAY);
+      await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
+        from: topUpPayment.pullPaymentExecutorAddress
+      });
+      const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
+
+      compareBigNumbers(pullPaymentInArray.lastPaymentTimestamp, ethDate);
+      compareBigNumbers(pullPaymentInArray.totalSpent, topUpPayment.topUpAmountInCents);
+    });
     it('should revert if not called by the pull payment executor', async () => {
       await assertRevert(
         pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
@@ -610,7 +620,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
       compareBigNumbers(pullPaymentInArray.totalLimit, newLimit);
     });
-
     it('should be able to execute a pull payment when the total limit is increased', async () => {
       // 1: Reach the limit
       for (let i = 0; i < numberOfTotalAllowedTopUps; i++) {
@@ -618,7 +627,6 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
           from: topUpPayment.pullPaymentExecutorAddress
         });
       }
-
       // 2: Make sure the execution won't happen if the total limit is reached
       await assertRevert(
         pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
@@ -734,15 +742,15 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       }
     });
     it('should return the total limit for the top up billing model based on the payment ID', async () => {
-      const limits = await pumaPayPullPayment.retrieveTotalLimits(topUpPayment.paymentID);
+      const limits = await pumaPayPullPayment.retrieveLimits(topUpPayment.paymentID);
       compareBigNumbers(limits.totalLimit, topUpPayment.totalLimit);
     });
     it('should return the total spent for the top up billing model based on the payment ID', async () => {
-      const limits = await pumaPayPullPayment.retrieveTotalLimits(topUpPayment.paymentID);
+      const limits = await pumaPayPullPayment.retrieveLimits(topUpPayment.paymentID);
       compareBigNumbers(limits.totalSpent, topUpPayment.topUpAmountInCents * topUpPaymentsExecuted);
     });
     it('should return ZERO values if the payment doesn\'t exists', async () => {
-      const limits = await pumaPayPullPayment.retrieveTotalLimits(web3.utils.padRight(web3.utils.fromAscii('OTHER_PAYMENT'), 64));
+      const limits = await pumaPayPullPayment.retrieveLimits(web3.utils.padRight(web3.utils.fromAscii('OTHER_PAYMENT'), 64));
 
       compareBigNumbers(limits.totalLimit, 0);
       compareBigNumbers(limits.totalSpent, 0);
