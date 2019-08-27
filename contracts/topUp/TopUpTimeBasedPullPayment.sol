@@ -455,14 +455,31 @@ contract TopUpTimeBasedPullPayment is PayableOwnable {
     isValidNumber(_newLimit)
     isValidNumber(_newPeriod)
     {
-        uint256 oldLimit = timeBasedLimits[_paymentID].limit;
-        uint256 oldPeriod = timeBasedLimits[_paymentID].period;
+        updateTimeBasedLimit(_paymentID, _newLimit);
+        updateTimeBasedPeriod(_paymentID, _newPeriod);
+    }
 
-        timeBasedLimits[_paymentID].limit = _newLimit;
-        timeBasedLimits[_paymentID].period = _newPeriod;
-
-        emit LogTimeBasedLimitUpdated(msg.sender, _paymentID, oldLimit, _newLimit);
-        emit LogTimeBasedPeriodUpdated(msg.sender, _paymentID, oldPeriod, _newPeriod);
+    /// @dev Method that updates the total limit for the top up payment
+    /// @param _paymentID - the ID of the payment for which time based limit and period will be updated
+    /// @param _newTotalLimit - new total based limit in FIAT cents
+    /// @param _newTimeBasedLimit - new time based limit in FIAT cents
+    /// @param _newTimeBasedPeriod - new time based period
+    function updateAllLimits(
+        bytes32 _paymentID,
+        uint256 _newTotalLimit,
+        uint256 _newTimeBasedLimit,
+        uint256 _newTimeBasedPeriod
+    )
+    public
+    isCustomer(_paymentID)
+    isValidNumber(_newTotalLimit)
+    isValidNumber(_newTimeBasedLimit)
+    isValidNumber(_newTimeBasedPeriod)
+    isValidNewTotalLimit(_paymentID, _newTotalLimit)
+    isValidNewTimeBasedLimit(_paymentID, _newTimeBasedLimit)
+    {
+        updateTotalLimit(_paymentID, _newTotalLimit);
+        updateTimeBasedLimitAndPeriod(_paymentID, _newTimeBasedLimit, _newTimeBasedPeriod);
     }
 
     /// @dev method that retrieves the limits specified on the top up payment

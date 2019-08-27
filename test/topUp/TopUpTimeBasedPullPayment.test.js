@@ -102,7 +102,7 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
       {
         from: executor
       });
-    
+
     return result;
   };
 
@@ -1236,6 +1236,179 @@ contract('Time Based Top Up Pull Payment Smart Contract', (accounts) => {
       logs[ 1 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
       compareBigNumbers(logs[ 1 ].args.oldPeriod, topUpPayment.timeBasedPeriod);
       compareBigNumbers(logs[ 1 ].args.newPeriod, newPeriod);
+    });
+  });
+
+  describe('Updating all limits for a top up payment', () => {
+    beforeEach('prepare smart contracts - approve() & transfer ETH & addExecutor()', async () => {
+      await prepareSmartContract();
+    });
+    beforeEach('register a pull payment', async () => {
+      await registerPullPayment();
+    });
+    it('should update the total limit', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+
+      await pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+        from: topUpPayment.customerAddress
+      });
+      const pullPayment = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
+      compareBigNumbers(pullPayment.totalLimit, newTotalLimit);
+    });
+    it('should update the time based limit', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 12000; // 120 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+
+      await pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+        from: topUpPayment.customerAddress
+      });
+      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
+      compareBigNumbers(timeBasedLimits.limit, newTimeBasedLimit);
+    });
+    it('should update the time based period', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+
+      await pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+        from: topUpPayment.customerAddress
+      });
+      const timeBasedLimits = await pumaPayPullPayment.timeBasedLimits(topUpPayment.paymentID);
+      compareBigNumbers(timeBasedLimits.period, newTimeBasedPeriod);
+    });
+    it('should revert if not executed by the customer', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+
+      await assertRevert(
+        pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+          from: topUpPayment.pullPaymentExecutorAddress
+        }),
+        topUpErrors.notCustomer
+      );
+    });
+    it('should revert if the new total limit is ZERO', async () => {
+      const newTotalLimit = 0;
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+      await assertRevert(
+        pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+          from: topUpPayment.customerAddress
+        }),
+        topUpErrors.lessThanZero
+      );
+    });
+    it('should revert if the new total limit is above the overflow limit', async () => {
+      const newTotalLimit = OVERFLOW_CHECK;
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+
+      await assertRevert(
+        pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+          from: topUpPayment.customerAddress
+        }),
+        topUpErrors.higherThanOverflow
+      );
+    });
+    it('should revert if the new time based limit is ZERO', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 0;
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+
+      await assertRevert(
+        pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+          from: topUpPayment.customerAddress
+        }),
+        topUpErrors.lessThanZero
+      );
+    });
+    it('should revert if the new time based limit is above the overflow limit', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = OVERFLOW_CHECK;
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+
+      await assertRevert(
+        pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+          from: topUpPayment.customerAddress
+        }),
+        topUpErrors.higherThanOverflow
+      );
+    });
+    it('should revert if the new time based period is ZERO', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 0;
+
+      await assertRevert(
+        pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+          from: topUpPayment.customerAddress
+        }),
+        topUpErrors.lessThanZero
+      );
+    });
+    it('should revert if the new time based period is above the overflow limit', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = OVERFLOW_CHECK;
+
+      await assertRevert(
+        pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+          from: topUpPayment.customerAddress
+        }),
+        topUpErrors.higherThanOverflow
+      );
+    });
+    it('should emit "LogTotalLimitUpdated" event', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+      const updateResult = await pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+        from: topUpPayment.customerAddress
+      });
+
+      const logs = updateResult.logs;
+      assert.equal(logs.length, 3);
+      assert.equal(logs[ 0 ].event, 'LogTotalLimitUpdated');
+      logs[ 0 ].args.customerAddress.should.be.equal(topUpPayment.customerAddress);
+      logs[ 0 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
+      compareBigNumbers(logs[ 0 ].args.oldLimit, topUpPayment.totalLimit);
+      compareBigNumbers(logs[ 0 ].args.newLimit, newTotalLimit);
+    });
+    it('should emit "LogTimeBasedLimitUpdated" event', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+      const updateResult = await pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+        from: topUpPayment.customerAddress
+      });
+
+      const logs = updateResult.logs;
+      assert.equal(logs.length, 3);
+      assert.equal(logs[ 1 ].event, 'LogTimeBasedLimitUpdated');
+      logs[ 1 ].args.customerAddress.should.be.equal(topUpPayment.customerAddress);
+      logs[ 1 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
+      compareBigNumbers(logs[ 1 ].args.oldLimit, topUpPayment.timeBasedLimit);
+      compareBigNumbers(logs[ 1 ].args.newLimit, newTimeBasedLimit);
+    });
+    it('should emit "LogTimeBasedPeriodUpdated" event', async () => {
+      const newTotalLimit = 12000; // 120 FIAT
+      const newTimeBasedLimit = 1200; // 12 FIAT
+      const newTimeBasedPeriod = 2 * DAY; // 2 Days
+      const updateResult = await pumaPayPullPayment.updateAllLimits(topUpPayment.paymentID, newTotalLimit, newTimeBasedLimit, newTimeBasedPeriod, {
+        from: topUpPayment.customerAddress
+      });
+
+      const logs = updateResult.logs;
+      assert.equal(logs.length, 3);
+      assert.equal(logs[ 2 ].event, 'LogTimeBasedPeriodUpdated');
+      logs[ 2 ].args.customerAddress.should.be.equal(topUpPayment.customerAddress);
+      logs[ 2 ].args.paymentID.should.be.equal(topUpPayment.paymentID);
+      compareBigNumbers(logs[ 2 ].args.oldPeriod, topUpPayment.timeBasedPeriod);
+      compareBigNumbers(logs[ 2 ].args.newPeriod, newTimeBasedPeriod);
     });
   });
 
