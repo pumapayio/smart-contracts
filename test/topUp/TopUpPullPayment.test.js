@@ -434,6 +434,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
         from: topUpPayment.pullPaymentExecutorAddress
       });
+      const ethDate = await currentBlockTime();
       const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
 
       compareBigNumbers(pullPaymentInArray.lastPaymentTimestamp, ethDate);
