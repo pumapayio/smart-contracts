@@ -4,6 +4,7 @@ const {calcSignedMessageForDeletionV2, calcSignedMessageForRegistrationV2} = req
 const {calcSignedMessageToMakeSinglePullPayment} = require('./singlePullPayment');
 const {calcSignedMessageForTimeBasedTopUpRegistration, calcSignedMessageForTimeBasedTopUpCancellation} = require('./topUp/timeBasedTopUpPullPayment');
 const {calcSignedMessageForTopUpRegistration, calcSignedMessageForTopUpCancellation} = require('./topUp/topUpPullPayment');
+const {calcSignedMessageForTopUpWithExpirationRegistration, calcSignedMessageForTopUpWithExpirationCancellation} = require('./topUp/topUpPullPaymentWithExpiration');
 
 module.exports = {
   getVRS,
@@ -15,5 +16,7 @@ module.exports = {
   calcSignedMessageForTopUpRegistration,
   calcSignedMessageForTopUpCancellation,
   calcSignedMessageForTimeBasedTopUpRegistration,
-  calcSignedMessageForTimeBasedTopUpCancellation
+  calcSignedMessageForTimeBasedTopUpCancellation,
+  calcSignedMessageForTopUpWithExpirationRegistration,
+  calcSignedMessageForTopUpWithExpirationCancellation
 };

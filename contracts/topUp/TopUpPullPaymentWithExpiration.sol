@@ -5,7 +5,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../ownership/PayableOwnable.sol";
 
 /// @dev - TODO: Add some information about the top up billing model.
-contract TopUpPullPayment is PayableOwnable {
+contract TopUpPullPaymentWithExpiration is PayableOwnable {
     using SafeMath for uint256;
 
     /// ===============================================================================================================
@@ -32,12 +32,17 @@ contract TopUpPullPayment is PayableOwnable {
         uint256 amountInPMA,
         uint256 conversionRate
     );
-
     event LogTotalLimitUpdated(
         address customerAddress,
         bytes32 paymentID,
         uint256 oldLimit,
         uint256 newLimit
+    );
+    event LogExpirationTimestampUpdated(
+        address customerAddress,
+        bytes32 paymentID,
+        uint256 oldExpirationTimestamp,
+        uint256 newExpirationTimestamp
     );
 
     /// ===============================================================================================================
@@ -71,6 +76,7 @@ contract TopUpPullPayment is PayableOwnable {
         uint256 startTimestamp;                 /// when subscription starts - in seconds
         uint256 lastPaymentTimestamp;           /// timestamp of last payment
         uint256 cancelTimestamp;                /// timestamp the payment was cancelled
+        uint256 expirationTimestamp;            /// expiration timestamp of the payment
         uint256 totalLimit;                     /// total limit that the customer is willing to pay
         uint256 totalSpent;                     /// total amount spent by the customer
     }
@@ -136,7 +142,14 @@ contract TopUpPullPayment is PayableOwnable {
         require(pullPayments[_paymentID].totalSpent.add(pullPayments[_paymentID].topUpAmountInCents) <= pullPayments[_paymentID].totalLimit, "Total limit reached.");
         _;
     }
-
+    modifier isBeforeExpirationTimestamp(bytes32 _paymentID) {
+        require(pullPayments[_paymentID].expirationTimestamp > now, "Payment is expired.");
+        _;
+    }
+    modifier isValidExpirationTimestamp(uint256 _expirationTimestamp) {
+        require(_expirationTimestamp > now, "Expiration timestamp must be in the future.");
+        _;
+    }
     /// ===============================================================================================================
     ///                                      Constructor
     /// ===============================================================================================================
@@ -208,8 +221,8 @@ contract TopUpPullPayment is PayableOwnable {
     /// @param s - S output of ECDSA signature.
     /// @param _paymentIDs  - [0] paymentID, [1] businessID
     /// @param _addresses   - [0] customer, [1] pull payment executor, [2] treasury
-    /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents,
-    ///                       [2] top up amount in cents, [3] start timestamp, [4] total limit
+    /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
+    ///                       [3] start timestamp, [4] total limit, [5] expiration timestamp
     /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
     function registerPullPayment(
         uint8 v,
@@ -217,13 +230,14 @@ contract TopUpPullPayment is PayableOwnable {
         bytes32 s,
         bytes32[2] memory _paymentIDs,
         address[3] memory _addresses,
-        uint256[5] memory _numbers,
+        uint256[6] memory _numbers,
         string memory _currency
     )
     public
     isExecutor()
     paymentDoesNotExist(_paymentIDs[0])
     isValidString(_currency)
+    isValidExpirationTimestamp(_numbers[5])
     {
         require(_paymentIDs[0] != EMPTY_BYTES32, "Invalid byte32 value.");
         require(_paymentIDs[1] != EMPTY_BYTES32, "Invalid byte32 value.");
@@ -243,6 +257,7 @@ contract TopUpPullPayment is PayableOwnable {
         require(_numbers[2] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
         require(_numbers[3] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
         require(_numbers[4] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
+        require(_numbers[5] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
 
         bytes32[2] memory paymentIDs = _paymentIDs;
 
@@ -258,6 +273,7 @@ contract TopUpPullPayment is PayableOwnable {
         pullPayments[paymentIDs[0]].topUpAmountInCents = _numbers[2];
         pullPayments[paymentIDs[0]].startTimestamp = _numbers[3];
         pullPayments[paymentIDs[0]].totalLimit = _numbers[4];
+        pullPayments[paymentIDs[0]].expirationTimestamp = _numbers[5];
 
         require(isValidRegistration(
                 v,
@@ -303,6 +319,7 @@ contract TopUpPullPayment is PayableOwnable {
     isPullPaymentExecutor(_paymentID)
     isValidNumber(_conversionRate)
     isWithinTheTotalLimits(_paymentID)
+    isBeforeExpirationTimestamp(_paymentID)
     returns (bool)
     {
         TopUpPayment storage payment = pullPayments[_paymentID];
@@ -374,14 +391,45 @@ contract TopUpPullPayment is PayableOwnable {
         emit LogTotalLimitUpdated(msg.sender, _paymentID, oldLimit, _newLimit);
     }
 
+    /// @dev Method that updates the expiration timestamp for the top up payment
+    /// @param _paymentID - the ID of the payment for which total limit will be updated
+    /// @param _newExpirationTimestamp - new expiration timestamp for the top up payment
+    function updateExpirationTimestamp(bytes32 _paymentID, uint256 _newExpirationTimestamp)
+    public
+    isCustomer(_paymentID)
+    isValidNumber(_newExpirationTimestamp)
+    isValidExpirationTimestamp(_newExpirationTimestamp)
+    {
+        uint256 oldExpirationTimestamp = pullPayments[_paymentID].expirationTimestamp;
+        pullPayments[_paymentID].expirationTimestamp = _newExpirationTimestamp;
+
+        emit LogExpirationTimestampUpdated(msg.sender, _paymentID, oldExpirationTimestamp, _newExpirationTimestamp);
+    }
+
+    /// @dev Method that updates both the total limit and the expiration timestamp for the top up payment
+    /// @param _paymentID - the ID of the payment for which total limit will be updated
+    /// @param _newLimit - new total limit in FIAT cents
+    /// @param _newExpirationTimestamp - new expiration timestamp for the top up payment
+    function updateTotalLimitAndExpirationTimestamp(bytes32 _paymentID, uint256 _newLimit, uint256 _newExpirationTimestamp)
+    public
+    isCustomer(_paymentID)
+    isValidNumber(_newLimit)
+    isValidNumber(_newExpirationTimestamp)
+    isValidNewTotalLimit(_paymentID, _newLimit)
+    isValidExpirationTimestamp(_newExpirationTimestamp)
+    {
+        updateTotalLimit(_paymentID, _newLimit);
+        updateExpirationTimestamp(_paymentID, _newExpirationTimestamp);
+    }
+
     /// @dev method that retrieves the limits specified on the top up payment
     /// @param _paymentID - ID of the payment
-    function retrieveTotalLimits(bytes32 _paymentID)
+    function retrieveLimits(bytes32 _paymentID)
     public
     view
-    returns (uint256 totalLimit, uint256 totalSpent)
+    returns (uint256 totalLimit, uint256 totalSpent, uint256 expirationTimestamp)
     {
-        return (pullPayments[_paymentID].totalLimit, pullPayments[_paymentID].totalSpent);
+        return (pullPayments[_paymentID].totalLimit, pullPayments[_paymentID].totalSpent, pullPayments[_paymentID].expirationTimestamp);
     }
 
     /// ===============================================================================================================
@@ -475,6 +523,7 @@ contract TopUpPullPayment is PayableOwnable {
                     _pullPayment.initialPaymentAmountInCents,
                     _pullPayment.topUpAmountInCents,
                     _pullPayment.startTimestamp,
+                    _pullPayment.expirationTimestamp,
                     _pullPayment.totalLimit
                 )
             ),

@@ -19,7 +19,9 @@ const topUpErrors = {
   totalLimitsReached: 'Total limit reached.',
   timeBasedLimitsReached: 'Time based limit reached.',
   invalidSignatureForRegistration: 'Invalid pull payment registration - ECRECOVER_FAILED.',
-  invalidSignatureForRCancellation: 'Invalid cancellation - ECRECOVER_FAILED.'
+  invalidSignatureForRCancellation: 'Invalid cancellation - ECRECOVER_FAILED.',
+  expirationTimestampNotInTheFuture: 'Expiration timestamp must be in the future.',
+  paymentIsExpired: 'Payment is expired.'
 };
 
 module.exports = {
