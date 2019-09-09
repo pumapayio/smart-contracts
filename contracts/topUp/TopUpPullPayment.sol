@@ -4,7 +4,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../ownership/PayableOwnable.sol";
 
-/// @dev - Top Up Billing model - Total Limits
+/// @dev - Top Up Billing model - Total Limit
 /// A business that allows their customers to purchase various items or services using Credits.
 /// -------------------------------------------------------------------------------------------
 /// The business allow their customers to subscribe to a top up billing model. The top-up billing model works as follows:
@@ -12,7 +12,7 @@ import "../ownership/PayableOwnable.sol";
 /// 2. The customer can start spending the 100 Credits for using different services or purchasing different items from the business.
 /// 3. When the customer’s Credits drops at 25 units, the business is allowed to charge 7.50$ for 75 Credits, therefore ‘topping up’ to 100 Credits again.
 /// -------------------------------------------------------------------------------------------
-/// Total Limits
+/// Total Limit
 /// The customer specifies that the maximum amount that (s)he is willing to spend in total in this top up billing model is 100$.
 /// This means that the business can trigger the top up payment and pull PMA from the customer account only up until 100$ in PMA.
 /// The customer can increase/decrease the top up limit at any point.
@@ -130,7 +130,6 @@ contract TopUpPullPayment is PayableOwnable {
         require(pullPayments[_paymentID].customerAddress == msg.sender, "msg.sender not allowed to update this payment.");
         _;
     }
-
     modifier paymentExists(bytes32 _paymentID) {
         require(pullPayments[_paymentID].paymentIDs[0] != "", "Pull Payment does not exists.");
         _;
@@ -208,8 +207,8 @@ contract TopUpPullPayment is PayableOwnable {
     ///                                      Public Functions - Executors Only
     /// ===============================================================================================================
     /// @dev Registers a new top up pull payment to the PumaPay Top Up Pull Payment Contract - The registration can be executed only
-    ///     by one of the executors of the PumaPay Pull Payment Contract
-    ///     and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
+    ///     by one of the executors of the PumaPay Pull Payment Contract and the
+    ///     PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
     ///     The total limits are set on registration and the total and time based amount spent are set to 0.
     ///     The initial payment amount for the top up payment is being executed on the registration of the pull payment.
     ///     On registration the initial payment is executed.
@@ -296,11 +295,7 @@ contract TopUpPullPayment is PayableOwnable {
     }
 
     /// @dev Executes a specific top up pull payment based on the payment ID - The pull payment should exist and the payment request
-    ///     should be valid in terms of whether it can be executed i.e. it is within the total and time based limits.
-    ///     If the top up payment is executed outside the time based period set on registration, then we update the set timestamp
-    ///     for the time based limitations and we set the time based amount spent to the top up amount.
-    ///     If the top up payment is executed within the time based period set on registration, then the time based spent amount is
-    ///     incremented by the top up amount.
+    ///     should be valid in terms of whether it can be executed i.e. it is within the total limit.
     ///     For the execution we calculate the amount in PMA using the conversion rate specified when calling the method.
     ///     From the 'conversionRate' and the 'topUpAmountInCents' we calculate the amount of PMA that
     ///     the business need to receive in their treasuryAddress.
@@ -531,4 +526,3 @@ contract TopUpPullPayment is PayableOwnable {
         return address(_address).balance <= MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS;
     }
 }
-

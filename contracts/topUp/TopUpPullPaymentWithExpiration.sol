@@ -4,7 +4,23 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../ownership/PayableOwnable.sol";
 
-/// @dev - TODO: Add some information about the top up billing model.
+/// @dev - Top Up Billing model - Total Limits
+/// A business that allows their customers to purchase various items or services using Credits.
+/// -------------------------------------------------------------------------------------------
+/// The business allow their customers to subscribe to a top up billing model. The top-up billing model works as follows:
+/// 1. The customer can purchase 100 Credits from the business for 10$.
+/// 2. The customer can start spending the 100 Credits for using different services or purchasing different items from the business.
+/// 3. When the customer’s Credits drops at 25 units, the business is allowed to charge 7.50$ for 75 Credits, therefore ‘topping up’ to 100 Credits again.
+/// -------------------------------------------------------------------------------------------
+/// Total Limits
+/// ------------
+/// The customer specifies that the maximum amount that (s)he is willing to spend in total in this top up billing model is 100$.
+/// This means that the business can trigger the top up payment and pull PMA from the customer account only up until 100$ in PMA.
+/// Expiration Time
+/// ----------------
+/// The customer specifies that the top up payment is valid only until 31/12/2019 (expiration time).
+/// The business is allowed to trigger the top up pull payments only until the expiration time i.e. 31/12/2019.
+/// The customer can increase/decrease the top up total and update the expiration date.
 contract TopUpPullPaymentWithExpiration is PayableOwnable {
     using SafeMath for uint256;
 
@@ -125,7 +141,6 @@ contract TopUpPullPaymentWithExpiration is PayableOwnable {
         require(pullPayments[_paymentID].customerAddress == msg.sender, "msg.sender not allowed to update this payment.");
         _;
     }
-
     modifier paymentExists(bytes32 _paymentID) {
         require(pullPayments[_paymentID].paymentIDs[0] != "", "Pull Payment does not exists.");
         _;
@@ -150,6 +165,7 @@ contract TopUpPullPaymentWithExpiration is PayableOwnable {
         require(_expirationTimestamp > now, "Expiration timestamp must be in the future.");
         _;
     }
+
     /// ===============================================================================================================
     ///                                      Constructor
     /// ===============================================================================================================
@@ -189,6 +205,7 @@ contract TopUpPullPaymentWithExpiration is PayableOwnable {
         }
         emit LogExecutorAdded(_executor);
     }
+
     /// @dev Removes a new executor. - can be executed only by the owner.
     ///     The balance of the owner is checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
@@ -210,8 +227,8 @@ contract TopUpPullPaymentWithExpiration is PayableOwnable {
     ///                                      Public Functions - Executors Only
     /// ===============================================================================================================
     /// @dev Registers a new top up pull payment to the PumaPay Top Up Pull Payment Contract - The registration can be executed only
-    ///     by one of the executors of the PumaPay Pull Payment Contract
-    ///     and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
+    ///     by one of the executors of the PumaPay Pull Payment Contract and the
+    ///     PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
     ///     The total limit and the expiration timestamp are set on registration and the total and time based amount spent are set to 0.
     ///     The initial payment amount for the top up payment is being executed on the registration of the pull payment.
     ///     On registration the initial payment is executed.
@@ -301,7 +318,7 @@ contract TopUpPullPaymentWithExpiration is PayableOwnable {
     }
 
     /// @dev Executes a specific top up pull payment based on the payment ID - The pull payment should exist and the payment request
-    ///     should be valid in terms of whether it can be executed i.e. it is within the total and time based limits.
+    ///     should be valid in terms of whether it can be executed i.e. it is within the total limit and the expiration timestamp.
     ///     If the top up payment is executed outside the time based period set on registration, then we update the set timestamp
     ///     for the time based limitations and we set the time based amount spent to the top up amount.
     ///     If the top up payment is executed within the time based period set on registration, then the time based spent amount is
