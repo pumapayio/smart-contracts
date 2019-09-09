@@ -212,7 +212,7 @@ Emits `LogPullPaymentExecuted` with customer address, paymentID, businessID, amo
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents,
 ///                       [2] top up amount in cents, [3] start timestamp, [4] total limit
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerPullPayment(
+function registerTopUpPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -237,7 +237,7 @@ isValidString(_currency) {}
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
 ///                       [3] start timestamp, [4] total limit, [5] time based limit, [6] time based period
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerPullPayment(
+function registerTopUpPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -262,7 +262,7 @@ isValidString(_currency) {}
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
 ///                       [3] start timestamp, [4] total limit, [5] expiration timestamp
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerPullPayment(
+function registerTopUpPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -289,7 +289,7 @@ isValidExpirationTimestamp(_numbers[5]) {}
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
 ///                       [3] start timestamp, [4] total limit, [5] time based limit, [6] time based period, [7] expiration timestamp
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerPullPayment(
+function registerTopUpPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -306,7 +306,7 @@ isValidExpirationTimestamp(_numbers[7]) {}
 ```
 
 #### Validate Registration 
-The `isValidRegistration()` method is being called when all the validations have been passed on the `registerPullPayment()` method.
+The `isValidRegistration()` method is being called when all the validations have been passed on the `registerTopUpPayment()` method.
 Checks if a registration request is valid by comparing the v, r, s params and the hashed params with the customer address.
 - - -
 ***Total Limits***

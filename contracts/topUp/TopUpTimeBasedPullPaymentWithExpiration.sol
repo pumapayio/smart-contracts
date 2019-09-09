@@ -269,7 +269,7 @@ contract TopUpTimeBasedPullPaymentWithExpiration is PayableOwnable {
     /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
     ///                       [3] start timestamp, [4] total limit, [5] time based limit, [6] time based period, [7] expiration timestamp
     /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-    function registerPullPayment(
+    function registerTopUpPayment(
         uint8 v,
         bytes32 r,
         bytes32 s,

@@ -79,11 +79,11 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     });
   };
 
-  const registerPullPayment = async () => {
+  const registerTopUpPayment = async () => {
     const signature = await signTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
     const sigVRS = await getVRS(signature);
 
-    const result = await pumaPayPullPayment.registerPullPayment(
+    const result = await pumaPayPullPayment.registerTopUpPayment(
       sigVRS.v,
       sigVRS.r,
       sigVRS.s,
@@ -109,7 +109,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     const sigVRS = await getVRS(signature);
 
     await assertRevert(
-      pumaPayPullPayment.registerPullPayment(
+      pumaPayPullPayment.registerTopUpPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
@@ -213,7 +213,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await prepareSmartContract();
     });
     it('should add the top up payment in the smart contract mapping', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
 
       const ethDate = await currentBlockTime();
       const pullPaymentInArray = await pumaPayPullPayment.pullPayments(topUpPayment.paymentID);
@@ -234,7 +234,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     });
 
     it('should transfer the PMA for the initial payment', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
 
       const treasuryBalanceAfter = await token.balanceOf(topUpPayment.treasuryAddress);
       const expectedAmountOfPmaTransferred =
@@ -248,7 +248,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       const sigVRS = await getVRS(signature);
 
       await assertRevert(
-        pumaPayPullPayment.registerPullPayment(
+        pumaPayPullPayment.registerTopUpPayment(
           sigVRS.v,
           sigVRS.r,
           sigVRS.s,
@@ -269,9 +269,9 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       const signature = await signTopUpRegistration(topUpPayment, CLIENT_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
-      await registerPullPayment();
+      await registerTopUpPayment();
       await assertRevert(
-        pumaPayPullPayment.registerPullPayment(
+        pumaPayPullPayment.registerTopUpPayment(
           sigVRS.v,
           sigVRS.r,
           sigVRS.s,
@@ -342,7 +342,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       const anotherTopUpAmount = 10000; // 100 FIAT
 
       await assertRevert(
-        pumaPayPullPayment.registerPullPayment(
+        pumaPayPullPayment.registerTopUpPayment(
           sigVRS.v,
           sigVRS.r,
           sigVRS.s,
@@ -360,7 +360,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       );
     });
     it('should emit a "LogPaymentRegistered" event ', async () => {
-      const pumaPayPullPaymentRegistration = await registerPullPayment();
+      const pumaPayPullPaymentRegistration = await registerTopUpPayment();
       const logs = pumaPayPullPaymentRegistration.logs;
 
       assert.equal(logs.length, 2);
@@ -370,7 +370,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       logs[ 1 ].args.businessID.should.be.equal(topUpPayment.businessID);
     });
     it('should emit a "LogPullPaymentExecuted" event ', async () => {
-      const pumaPayPullPaymentRegistration = await registerPullPayment();
+      const pumaPayPullPaymentRegistration = await registerTopUpPayment();
       const logs = pumaPayPullPaymentRegistration.logs;
 
       const treasuryBalanceAfter = await token.balanceOf(topUpPayment.treasuryAddress);
@@ -393,7 +393,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await prepareSmartContract();
     });
     beforeEach('register a new pull payment', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
     });
     it('should transfer PMA to the treasury wallet', async () => {
       await pumaPayPullPayment.executeTopUpPayment(topUpPayment.paymentID, EUR_EXCHANGE_RATE, {
@@ -514,7 +514,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await prepareSmartContract();
     });
     beforeEach('register a pull payment', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
     });
     it('should fail to execute the top up if the total limits have been reached', async () => {
       for (let i = 0; i < numberOfTotalAllowedTopUps; i++) {
@@ -536,7 +536,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await prepareSmartContract();
     });
     beforeEach('register a pull payment', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
     });
     it('should update the cancel timestamp', async () => {
       await cancelPullPayment();
@@ -611,7 +611,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await prepareSmartContract();
     });
     beforeEach('register a pull payment', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
     });
     it('should update the total limit for the payment', async () => {
       const newLimit = 12000; // 120 FIAT
@@ -729,7 +729,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       await prepareSmartContract();
     });
     beforeEach('register a pull payment', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
     });
     beforeEach('execute a few pull payments within the limits', async () => {
       const numberOfAllowedTopUps = Math.floor(( topUpPayment.totalLimit / topUpPayment.topUpAmountInCents ));
@@ -788,7 +788,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
     });
     it('should fund the executor on registration', async () => {
       const executorBalanceBefore = await web3.eth.getBalance(executor);
-      const transaction = await registerPullPayment();
+      const transaction = await registerTopUpPayment();
 
       const txFee = Number(transaction.receipt.gasUsed) * GAS_PRICE;
       const executorBalanceAfter = await web3.eth.getBalance(executor);
@@ -798,7 +798,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       compareBigNumbers(expectedBalance, FUNDING_AMOUNT);
     });
     it('should emit a "LogSmartContractActorFunded" event when the executor is funded on registration', async () => {
-      const transaction = await registerPullPayment();
+      const transaction = await registerTopUpPayment();
 
       const logs = transaction.logs;
       const ethDate = await currentBlockTime();
@@ -810,7 +810,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       compareBigNumbers(logs[ 1 ].args.timestamp, ethDate);
     });
     it('should fund the executor on cancellation', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
       const executorBalance = await web3.eth.getBalance(executor);
       const executorBalanceETH = web3.utils.fromWei(String(executorBalance), 'ether');
       await transferETH(( executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS ), executor, deployerAccount);
@@ -825,7 +825,7 @@ contract('Top Up Pull Payment Smart Contract', (accounts) => {
       compareBigNumbers(expectedBalance, FUNDING_AMOUNT);
     });
     it('should emit a "LogSmartContractActorFunded" event when the executor is funded on cancellation', async () => {
-      await registerPullPayment();
+      await registerTopUpPayment();
       const executorBalance = await web3.eth.getBalance(executor);
       const executorBalanceETH = web3.utils.fromWei(String(executorBalance), 'ether');
       await transferETH(( executorBalanceETH - MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS ), executor, deployerAccount);
