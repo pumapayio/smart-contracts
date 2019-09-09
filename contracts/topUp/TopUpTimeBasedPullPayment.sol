@@ -89,10 +89,10 @@ contract TopUpTimeBasedPullPayment is PayableOwnable {
     }
 
     struct TimeBasedLimits {
-        uint256 limit;                     /// total limit that the customer is willing to pay
-        uint256 spent;                     /// total amount spent by the customer
-        uint256 period;                    /// total amount spent by the customer
-        uint256 setTimestamp;              /// total amount spent by the customer
+        uint256 limit;                     /// time based limit that the customer is willing to pay
+        uint256 spent;                     /// time based amount spent by the customer
+        uint256 period;                    /// time based period set by the customer
+        uint256 setTimestamp;              /// time based limit set timestamp
     }
 
     /// ===============================================================================================================
@@ -225,8 +225,10 @@ contract TopUpTimeBasedPullPayment is PayableOwnable {
     ///     and the PumaPay Pull Payment Contract checks that the pull payment has been singed by the customer of the account.
     ///     The total and time based limits are set on registration and the total and time based amount spent are set to 0.
     ///     The initial payment amount for the top up payment is being executed on the registration of the pull payment.
+    ///     On registration the initial payment is executed.
     ///     The balance of the executor (msg.sender) is checked and if funding is needed 0.5 ETH is transferred.
     ///     Emits 'LogPaymentRegistered' with customer address, pull payment executor address and paymentID.
+    ///     Emits 'LogPullPaymentExecuted' with customer address, paymentID, businessID, amount in PMA and conversion rate.
     /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
@@ -583,6 +585,7 @@ contract TopUpTimeBasedPullPayment is PayableOwnable {
     /// @param r - R output of ECDSA signature.
     /// @param s - S output of ECDSA signature.
     /// @param _pullPayment - pull payment to be validated.
+    /// @param _timeBasedLimits - time based limits to be validated.
     /// @return bool - if the v, r, s params with the hashed params match the customer address
     function isValidRegistration(
         uint8 v,

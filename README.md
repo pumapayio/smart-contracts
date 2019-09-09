@@ -10,7 +10,12 @@ Our Pull Payment Protocol currently supports a variaty of payments models such a
 * Recurring Pull Payment (Fixed amount / Fixed period)
 * Recurring Pull Payment with initial payment 
 * Recurring Pull Payment with trial period (free trial)
-* Recurring Pull Payment with initial payment and trial period (paid trial)    
+* Recurring Pull Payment with initial payment and trial period (paid trial)
+#### Top Up Pull Payments    
+* Top Up Pull Payment with Total Limits
+* Top Up Pull Payment with Total Limits and Time-based limits
+* Top Up Pull Payment with Total Limits and Expiration time
+* Top Up Pull Payment with Total Limits, Time-based limits and Expiration time
 
 The current version of our protocol has a semi-decentralized approach in order to reduced the gas fees that are involved with setting the PMA/Fiat rates on the blockchain and eliminate the customer costs for registering and cancelling pull payments, which are currently taken care of by PumaPay through the smart contract.  
 In order for the smart contract to operate correctly, it requires that the smart contract holds ETH which are used for funding the owner address and the executors. 
