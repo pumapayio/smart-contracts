@@ -25,6 +25,7 @@ The smart contract will be monitored and once its balance drops below 2 ETH it w
 You can find the documentation of our smart contracts here:
 * [Pull Payment V1.1 Smart Contract](./docs/Pull%20Payment%20V1.md)
 * [Pull Payment V2 Smart Contract](./docs/Pull%20Payment%20V2.md)
+* [Top Up Pull Payment Smart Contract](./docs/Top%20Up%20Pull%20Payment.md)
 
 ## ChangeLog
 #### V1.1
