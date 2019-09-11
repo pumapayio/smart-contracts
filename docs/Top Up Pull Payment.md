@@ -3,10 +3,10 @@
 ### Use Case
 A business that allows their customers to purchase various items or services using Credits. 
 
-The business allow their customers to subscribe to a top up billing model. The top-up billing model works as follows:
+The business allows their customers to subscribe to a top up billing model. The top-up billing model works as follows:
 1. The customer can purchase 100 Credits from the business for 10$.
-2. The customer can start spending the 100 Credits for using different services or purchasing different items from the business.
-3. When the customer’s Credits drops at 25 units, the business is allowed to charge 7.50$ for 75 Credits, therefore ‘topping up’ to 100 Credits again.
+2. The customer can then start spending the 100 Credits using different services or through purchasing different items from the business.
+3. When the customer's Credits drops to 25 credits, the business is allowed to charge 7.50$ for 75 Credits, therefore 'topping up' to 100 Credits again.
 4. The customer is allowed to specify different limits when it comes to the top up pull payment such as:
     1. Total Limits - ***example:*** *100$ in total*
     2. Time-based limits - ***example:*** *20$ per day*
@@ -17,7 +17,7 @@ The business allow their customers to subscribe to a top up billing model. The t
 The customer is allowed to specify how much (s)he is willing to spend in total.   
 ***Example:***
 The customer subscribed to a top up billing model which will charge him 10$ for purchasing 100 Credits.   
-The customer spends 75 Credits and the business can charge the customer $7.50 for topping up to 75 Credits.  
+The customer spends 75 Credits and the business can automatically charge the customer $7.50 to top up the 75 Credits.  
 
 The customer specifies that the maximum amount that (s)he is willing to spend in total in this top up billing model is 100$.  
 
@@ -25,7 +25,7 @@ This means that the business can trigger the top up payment and pull PMA from th
 The customer can increase/decrease the top up limit at any point.
 
 #### Time-Based Limits
-The customer is allowed to specify how much (s)he is willing to spend in total and for a specific time period.   
+The customer is allowed to specify how much (s)he is willing to spend in total for a specific time period.   
 ***Example:***
 The customer subscribed to a top up billing model which will charge him 10$ for purchasing 100 Credits.   
 The customer spends 75 Credits and the business can charge the customer $7.50 for topping up to 75 Credits.  
@@ -41,28 +41,28 @@ The customer can increase/decrease the top up total and time-based limit at any 
 The customer is allowed to specify how much (s)he is willing to spend in total and until a specific date.   
 ***Example:***
 The customer subscribed to a top up billing model which will charge him 10$ for purchasing 100 Credits.   
-The customer spends 75 Credits and the business can charge the customer $7.50 for topping up to 75 Credits.  
+If the customer spends 75 Credits the business can then automatically charge the customer $7.50 to top up his wallet to 100 credits.  
 
 The customer specifies that the maximum amount that (s)he is willing to spend in total in this top up billing model is 100$, 
-and that the top up payment is valid only until 31/12/2019 (expiration time). 
+and that the top up payment is only valid until 31/12/2019 (expiration time). 
 
-This means that the business can trigger the top up payment and pull PMA from the customer account only up until 100$ in PMA.
-In addition, the business is allowed to trigger the top up pull payments only until the expiration time i.e. 31/12/2019.    
-The customer can increase/decrease the top up total and update the expiration date.
+This means that the business can trigger the top up payment and pull PMA from the customer account up until 100$ in PMA.
+In addition, the business is only allowed to trigger the top up pull payments only until the expiration time of i.e. 31/12/2019.    
+The customer can increase/decrease the top up total and update the expiration date whenever they choose.
 
 ####  Combination of the above - Total Limits & Time-Based limits & Expiration Time
 The customer is allowed to specify how much (s)he is willing to spend in total, for a specific time period and until a specific date.
 ***Example:***
 The customer subscribed to a top up billing model which will charge him 10$ for purchasing 100 Credits.   
-The customer spends 75 Credits and the business can charge the customer $7.50 for topping up to 75 Credits.  
+If the customer spends 75 Credits the business can then automatically charge the customer $7.50 to top up his wallet to 100 credits.
 
 The customer specifies that the maximum amount that (s)he is willing to spend in total in this top up billing model is 100$,
 the maximum amount that he is willing to spend daily (time-based limit) is 20$ 
 and that the top up payment is valid only until 31/12/2019 (expiration time). 
 
 This means that the business can trigger the top up payment and pull PMA from the customer account only up until 100$ in PMA.
-The time-based limit restricts the business to pull from the customer account only up until 20$ per day in PMA.
-In addition, the business is allowed to trigger the top up pull payments only until the expiration time i.e. 31/12/2019.    
+The time-based limit, restricts the business to pull from the customer account only up until 20$ per day in PMA.
+In addition, the business is allowed to trigger the top up pull payments only until the expiration date i.e. 31/12/2019.    
 The customer can increase/decrease the top up total and update the expiration date.
 
 
@@ -75,16 +75,15 @@ We have developed 4 different smart contracts, one for each use case that we hav
 
 **The main logic is the same for each smart contract:**
   
-When the customer subscribes to a top up billing model, (s)he is signing the top up billing model parameters (see below for more details).
-On the smart contract we validate that the registration came indeed from the customer and we store the top up pull payment on the smart contract. 
-At the same time, the smart contract executes the first payment. On successful registration and first payment, the business is notified for the payment 
-and it gives access to the customer for the service (s)he has purchased.
-The customer can enjoy the service from the business and once the 'credits' balance of the customer drops below the predefined amount, 
-the business can trigger a top up through our PumaPay APIs for the execution of the top up.
-On the smart contract we are checking if the top up is allowed to happen i.e. is within the limits (total/time-based/expiration time), 
-and if it is, the pull payment is executed transferring PMA from the customer to the business' treasury wallet. The PumaPay ecosystem
-notifies the business for the successful pull payment and they can update the 'credits' to the customer's account. 
-If the payment is not allowed to happen, i.e. the limits have been reached, the customer is notified in their wallet to update their limits.
+When the customer subscribes to a top up billing model, (s)he is setting the top up billing model parameters (see below for more details).
+On the smart contract we validate that the registration came from the customer and store the top up pull payment. The smart contract then executes the first payment. Following successful registration and first payment, the business is then notified of the payment and it gives the customer access to the service (s)he has purchased.
+
+The customer can then continue to use the service provided by the business and once the 'credits' balance of the customer drops below the predefined amount, the business can then trigger a top up through our PumaPay APIs to execute the top up.
+
+We monitor the smart contracts to ensure they meet the set of parameters
+i.e. is within the limits (total/time-based/expiration time), if the parameters are met, the pull payment is executed transferring PMA from the customer to the business' treasury wallet. The PumaPay ecosystem
+notifies the business of the successful pull payment and they can update the 'credits' in the customer's account. 
+If the payment is not allowed to happen, i.e. the limits have been reached, the customer is notified in their wallet and asks the customers to update the limits.
 
 ## Smart Contracts
 *Solidity Version: v0.5.11*
@@ -110,7 +109,7 @@ contract TopUpPullPayment is PayableOwnable
 The owner (only one) of the smart contract is responsible for:
 1. Add executors `function addExecutor(address _executor)`
 2. Remove executor `function removeExecutor(address _executor)`  
-On each function related with setting the rate or adding/removing executors the balance of the owner is checked and if the balance is lower than 0.01 ETH then 1 more ETH are sent to the owner address in order to pay for the gas fees related with those transactions.  
+On each function related with setting the rate or adding/removing executors, the balance of the owner is checked and if the balance is lower than 0.01 ETH then 1 more ETH is sent to the ownerÕs address in order to pay for the gas fees related with those transactions.  
 The owner is an address owned by the association governing the smart contract.
 ```solidity
 uint256 constant internal FUNDING_AMOUNT = 0.5 ether;
@@ -121,7 +120,7 @@ if (isFundingNeeded(owner)) {
 ```
 
 #### Executors
-The `TopUpPullPayment` contract can have multiple executors. Each executor is allowed to register or cancel a pull payment on behalf of a customer. The curstomer should sign the pull payment details using `keccak256` through the wallet and on registration/cancellation the signature parameters `(v, r, s)` of the signed pull payment are used to verify that the customer address was indeed the one which requested the registration/cancellation. Similarily to the owner, on registration/cancellation function the balance of the executor is checked and if is lower than 0.01 ETH 1 more ETH is sent from the smart contract to the executor to allow for registration/cancellation of pull payments.  
+The `TopUpPullPayment` contract can have multiple executors. Each executor is allowed to register or cancel a pull payment on behalf of a customer. The curstomer should sign the pull payment details using `keccak256` through the wallet and on registration/cancellation the signature parameters `(v, r, s)` of the signed pull payment are used to verify that the customer address was indeed the one which requested the registration/cancellation. Similarly to the owner, on registration/cancellation function the balance of the executor is checked and if it is lower than 0.01 ETH 1 more ETH is sent from the smart contract to the executor to allow for registration/cancellation of pull payments.  
 The executor(s) is an address owned by the association governing the smart contract.
 ```solidity
 mapping (address => bool) public executors;
@@ -130,7 +129,7 @@ mapping (address => bool) public executors;
 #### Top Up PullPayment
 The `TopUpPullPayment` contract consists of a mapping for the `TopUpPayment`. 
 The mapping consists of the `paymentID` as `bytes32` and the `TopUpPayment`.
-In case of the time based limits, we have another mapping of the `paymentID` as `bytes32` to the `TimeBasedLimits`.
+In the case of the time based limits, we have another mapping of the `paymentID` as `bytes32` to the `TimeBasedLimits`.
 ```solidity
 mapping(bytes32 => TopUpPayment) public pullPayments;
 /// For time based limits we have also
@@ -194,11 +193,11 @@ In this case, we have both `TopUpPayment` as specified in the expiration time ca
 
 #### Register Top Up Pull Payment
 Registers a new top up pull payment to the PumaPay Top Up Pull Payment Contract.  
-The registration can be executed only by one of the executors of the PumaPay Pull Payment Contract and the PumaPay Pull Payment 
-Contract checks that the pull payment has been singed by the customer of the account.  See [Validate Registration](#validate-registration).
-The total (and time based limits and/or expiration timestamp) are set on registration and the total (and time based) amount spent are set to 0.
+The registration can only be executed by an executor of the PumaPay Pull Payment Contract and the PumaPay Pull Payment. 
+The Contract checks that the pull payment has been signed by the customer of the account.  See [Validate Registration](#validate-registration).
+The total (and time-based limits and/or expiration timestamp) are set on registration and the total (and time based) amount spent are set to 0.
 The initial payment amount for the top up payment is being executed on the registration of the pull payment.
-On registration the initial payment is executed and the business is notified. 
+After registration, the initial payment is executed and the business is notified. 
 Emits `LogPaymentRegistered` with customer address, pull payment executor address and paymentID.
 Emits `LogPullPaymentExecuted` with customer address, paymentID, businessID, amount in PMA and conversion rate.
 - - -
@@ -212,7 +211,7 @@ Emits `LogPullPaymentExecuted` with customer address, paymentID, businessID, amo
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents,
 ///                       [2] top up amount in cents, [3] start timestamp, [4] total limit
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerTopUpPayment(
+function registerPullPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -237,7 +236,7 @@ isValidString(_currency) {}
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
 ///                       [3] start timestamp, [4] total limit, [5] time based limit, [6] time based period
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerTopUpPayment(
+function registerPullPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -262,7 +261,7 @@ isValidString(_currency) {}
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
 ///                       [3] start timestamp, [4] total limit, [5] expiration timestamp
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerTopUpPayment(
+function registerPullPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -289,7 +288,7 @@ isValidExpirationTimestamp(_numbers[5]) {}
 /// @param _numbers     - [0] initial conversion rate, [1] initial payment amount in cents, [2] top up amount in cents,
 ///                       [3] start timestamp, [4] total limit, [5] time based limit, [6] time based period, [7] expiration timestamp
 /// @param _currency - currency of the payment / 3-letter abbr i.e. 'EUR'.
-function registerTopUpPayment(
+function registerPullPayment(
     uint8 v,
     bytes32 r,
     bytes32 s,
@@ -306,7 +305,7 @@ isValidExpirationTimestamp(_numbers[7]) {}
 ```
 
 #### Validate Registration 
-The `isValidRegistration()` method is being called when all the validations have been passed on the `registerTopUpPayment()` method.
+The `isValidRegistration()` method is being called when all the validations have been passed on the `registerPullPayment()` method.
 Checks if a registration request is valid by comparing the v, r, s params and the hashed params with the customer address.
 - - -
 ***Total Limits***
@@ -461,8 +460,7 @@ returns (bool)
 ```
 
 #### Cancel Top Up Pull Payment
-Cancels a top up pull payment - The cancellation needs can be executed only by one of the executors of the PumaPay Pull Payment Contract and 
-the PumaPay Pull Payment Contract checks that the pull payment's paymentID and businessID have been singed by the customer address.
+Cancels a top up pull payment - The cancellation must be executed by one of the executors of the PumaPay Pull Payment Contract. The PumaPay Pull Payment Contract then checks that the pull payment's paymentID and businessID have been signed by the customer address.
 See [Validate Cancellation](#validate-cancellation) for more details.
 This method sets the cancellation of the pull payment in the pull payments array for this pull payment executor specified.
 Emits `LogPaymentCancelled` with pull payment executor address and paymentID.
@@ -484,8 +482,8 @@ Emits `LogPaymentCancelled` with pull payment executor address and paymentID.
 ```
 
 #### Validate Cancellation
-The `isValidCancellation()` method is being called when all the validations have been passed on the `cancelTopUpPayment()` method.
-Checks if a cancellation request is valid by comparing the v, r, s params and the hashed params with the customer address.
+The `isValidCancellation()` method is used when all the validations have been passed on the `cancelTopUpPayment()` method.
+It checks if a cancellation request is valid by comparing the v, r, s params and the hashed params with the customer address.
 ```solidity
 /// @param v - recovery ID of the ETH signature. - https://github.com/ethereum/EIPs/issues/155
 /// @param r - R output of ECDSA signature.
@@ -513,16 +511,13 @@ returns (bool){
 ```
 
 #### Execute Top Up Pull Payment
-Executes a specific top up pull payment based on the payment ID - The pull payment should exist and the payment request
-should be valid in terms of whether it can be executed i.e. it is within the total and time based limits.
-If the top up payment is executed outside the time based period set on registration, then we update the set timestamp
-for the time based limitations and we set the time based amount spent to the top up amount.
-If the top up payment is executed within the time based period set on registration, then the time based spent amount is
-incremented by the top up amount.
-For the execution we calculate the amount in PMA using the conversion rate specified when calling the method.
-From the `conversionRate` and the `topUpAmountInCents` we calculate the amount of PMA that the business need to receive in their treasuryAddress.
-The smart contract transfers from the customer account to the treasury wallet the amount in PMA.
-After execution we set the last payment timestamp to NOW and we increase the total spent amount with the top up amount.
+Executes a specific top up pull payment based on the payment ID - The pull payment should exist and the payment request should be valid in terms of whether it satisfies parameters i.e. it is within the total and time based limits.
+If the top up payment is executed outside the time based period set during registration, then we update the set timestamp for the time based limitations and set the time based amount spent to the top up amount.
+If the top up payment is executed within the time based period set on registration, then the time based spent amount is incremented by the top up amount.
+For the execution, we calculate the amount in PMA using the conversion rate specified when calling the method.
+From the `conversionRate` and the `topUpAmountInCents` we calculate the amount of PMA that the business needs to receive in their treasuryAddress.
+The smart contract transfers the PMA amount from the customer account to the treasury.
+After execution we set the last payment timestamp to NOW and then increase the total spent amount with the top up amount.
 Emits `LogPullPaymentExecuted` with customer address, `msg.sender` as the pull payment executor address and the paymentID.
 ```solidity
 /// @param _paymentID - ID of the payment.
@@ -558,8 +553,8 @@ returns (bool)
 ```
 
 #### Update Limits
-Method that updates the total limit for the top up payment. We are checking if the update request came from the correct customer and if the 
-new limits is above the amount that it was spent by the customer until that point. Over/Underflow checks  are always in place when it comes to numbers.
+Method that updates the total limit of the top up payment. We check if the update request came from the correct customer and if the 
+new limits are above the amount that was spent by the customer until that point. Over/Underflow checks are always in place when it comes to numbers.
 The limits can be updated either all together or individually. For more details on the update methods, please check the code.
 - - -
 ***Total Limits***
