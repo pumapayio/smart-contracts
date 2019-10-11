@@ -35,6 +35,7 @@
     "chai-as-promised": "7.1.1",
     "chai-bignumber": "3.0.0",
     "ganache-cli": "6.6.0",
+    "husky": "^3.0.8",
     "openzeppelin-test-helpers": "0.4.0",
     "prettier": "^1.18.2",
     "prettier-plugin-solidity": "^1.0.0-alpha.27",
@@ -43,5 +44,10 @@
     "solidity-coverage": "0.6.3",
     "truffle-flattener": "1.3.0",
     "truffle-security": "^1.5.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm test"
+    }
   }
 }
