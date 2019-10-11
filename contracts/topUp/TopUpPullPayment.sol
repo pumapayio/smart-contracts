@@ -56,9 +56,7 @@ contract TopUpPullPayment is PayableOwnable {
     /// ===============================================================================================================
     uint256 constant internal RATE_CALCULATION_NUMBER = 10 ** 26;    /// Check `calculatePMAFromFiat()` for more details
     uint256 constant internal OVERFLOW_LIMITER_NUMBER = 10 ** 20;    /// 1e^20 - Prevent numeric overflows
-    uint256 constant internal FIAT_TO_CENT_FIXER = 100;              /// Fiat currencies have 100 cents in 1 basic monetary unit.
 
-    uint256 constant internal ONE_ETHER = 1 ether;                                  /// PumaPay token has 18 decimals - same as one ETHER
     uint256 constant internal FUNDING_AMOUNT = 0.5 ether;                           /// Amount to transfer to owner/executor
     uint256 constant internal MINIMUM_AMOUNT_OF_ETH_FOR_OPERATORS = 0.15 ether;     /// min amount of ETH for owner/executor
     bytes32 constant internal EMPTY_BYTES32 = "";
@@ -169,7 +167,7 @@ contract TopUpPullPayment is PayableOwnable {
     ///     The balance of the owner is also checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function addExecutor(address payable _executor)
-    public
+    external
     onlyOwner
     isValidAddress(_executor)
     executorDoesNotExists(_executor)
@@ -190,7 +188,7 @@ contract TopUpPullPayment is PayableOwnable {
     ///     The balance of the owner is checked and if funding is needed 0.5 ETH is transferred.
     /// @param _executor - address of the executor which cannot be zero address.
     function removeExecutor(address payable _executor)
-    public
+    external
     onlyOwner
     isValidAddress(_executor)
     executorExists(_executor)
@@ -227,61 +225,59 @@ contract TopUpPullPayment is PayableOwnable {
         uint8 v,
         bytes32 r,
         bytes32 s,
-        bytes32[2] memory _paymentIDs,
-        address[3] memory _addresses,
-        uint256[5] memory _numbers,
-        string memory _currency
+        bytes32[2] calldata _paymentIDs,
+        address[3] calldata _addresses,
+        uint256[5] calldata _numbers,
+        string calldata _currency
     )
-    public
+    external
     isExecutor()
     paymentDoesNotExist(_paymentIDs[0])
     isValidString(_currency)
     {
-        require(_paymentIDs[0] != EMPTY_BYTES32, "Invalid byte32 value.");
-        require(_paymentIDs[1] != EMPTY_BYTES32, "Invalid byte32 value.");
+        require(_paymentIDs[0] != EMPTY_BYTES32, "PaymentID - Invalid byte32 value.");
+        require(_paymentIDs[1] != EMPTY_BYTES32, "BusinessID - Invalid byte32 value.");
 
-        require(_addresses[0] != address(0), "Invalid address - ZERO_ADDRESS provided.");
-        require(_addresses[1] != address(0), "Invalid address - ZERO_ADDRESS provided.");
-        require(_addresses[2] != address(0), "Invalid address - ZERO_ADDRESS provided.");
+        require(_addresses[0] != address(0), "Invalid customer address - ZERO_ADDRESS provided.");
+        require(_addresses[1] != address(0), "Invalid pull payment executor address - ZERO_ADDRESS provided.");
+        require(_addresses[2] != address(0), "Invalid treasury address - ZERO_ADDRESS provided.");
 
-        require(_numbers[0] > 0, "Invalid number - Must be higher than zero.");
-        require(_numbers[1] > 0, "Invalid number - Must be higher than zero.");
-        require(_numbers[2] > 0, "Invalid number - Must be higher than zero.");
-        require(_numbers[3] > 0, "Invalid number - Must be higher than zero.");
-        require(_numbers[4] > 0, "Invalid number - Must be higher than zero.");
+        require(_numbers[0] > 0, "Invalid initial conversion rate number - Must be higher than zero.");
+        require(_numbers[1] > 0, "Invalid initial payment amount in cents number - Must be higher than zero.");
+        require(_numbers[2] > 0, "Invalid top up amount in cents number - Must be higher than zero.");
+        require(_numbers[3] > 0, "Invalid start timestamp number - Must be higher than zero.");
+        require(_numbers[4] > 0, "Invalid total limit number - Must be higher than zero.");
 
-        require(_numbers[0] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
-        require(_numbers[1] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
-        require(_numbers[2] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
-        require(_numbers[3] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
-        require(_numbers[4] <= OVERFLOW_LIMITER_NUMBER, "Invalid number - Must be lower than the overflow limit.");
+        require(_numbers[0] <= OVERFLOW_LIMITER_NUMBER, "Invalid initial conversion rate number - Must be lower than the overflow limit.");
+        require(_numbers[1] <= OVERFLOW_LIMITER_NUMBER, "Invalid initial payment amount in cents number - Must be lower than the overflow limit.");
+        require(_numbers[2] <= OVERFLOW_LIMITER_NUMBER, "Invalid top up amount in cents number - Must be lower than the overflow limit.");
+        require(_numbers[3] <= OVERFLOW_LIMITER_NUMBER, "Invalid start timestamp number - Must be lower than the overflow limit.");
+        require(_numbers[4] <= OVERFLOW_LIMITER_NUMBER, "Invalid total limit number - Must be lower than the overflow limit.");
 
-        bytes32[2] memory paymentIDs = _paymentIDs;
+        pullPayments[_paymentIDs[0]].paymentIDs[0] = _paymentIDs[0];
+        pullPayments[_paymentIDs[0]].paymentIDs[1] = _paymentIDs[1];
+        pullPayments[_paymentIDs[0]].currency = _currency;
+        pullPayments[_paymentIDs[0]].customerAddress = _addresses[0];
+        pullPayments[_paymentIDs[0]].executorAddress = _addresses[1];
+        pullPayments[_paymentIDs[0]].treasuryAddress = _addresses[2];
 
-        pullPayments[paymentIDs[0]].paymentIDs[0] = paymentIDs[0];
-        pullPayments[paymentIDs[0]].paymentIDs[1] = paymentIDs[1];
-        pullPayments[paymentIDs[0]].currency = _currency;
-        pullPayments[paymentIDs[0]].customerAddress = _addresses[0];
-        pullPayments[paymentIDs[0]].executorAddress = _addresses[1];
-        pullPayments[paymentIDs[0]].treasuryAddress = _addresses[2];
-
-        pullPayments[paymentIDs[0]].initialConversionRate = _numbers[0];
-        pullPayments[paymentIDs[0]].initialPaymentAmountInCents = _numbers[1];
-        pullPayments[paymentIDs[0]].topUpAmountInCents = _numbers[2];
-        pullPayments[paymentIDs[0]].startTimestamp = _numbers[3];
-        pullPayments[paymentIDs[0]].totalLimit = _numbers[4];
+        pullPayments[_paymentIDs[0]].initialConversionRate = _numbers[0];
+        pullPayments[_paymentIDs[0]].initialPaymentAmountInCents = _numbers[1];
+        pullPayments[_paymentIDs[0]].topUpAmountInCents = _numbers[2];
+        pullPayments[_paymentIDs[0]].startTimestamp = _numbers[3];
+        pullPayments[_paymentIDs[0]].totalLimit = _numbers[4];
 
         require(isValidRegistration(
                 v,
                 r,
                 s,
-                pullPayments[paymentIDs[0]]
+                pullPayments[_paymentIDs[0]]
             ),
             "Invalid pull payment registration - ECRECOVER_FAILED."
         );
 
         executePullPaymentOnRegistration(
-            [paymentIDs[0], paymentIDs[1]],
+            [_paymentIDs[0], _paymentIDs[1]],
             [_addresses[0], _addresses[2]],
             [_numbers[1], _numbers[0]]
         );
@@ -291,7 +287,7 @@ contract TopUpPullPayment is PayableOwnable {
             emit LogSmartContractActorFunded("executor", msg.sender, now);
         }
 
-        emit LogPaymentRegistered(_addresses[0], paymentIDs[0], paymentIDs[1]);
+        emit LogPaymentRegistered(_addresses[0], _paymentIDs[0], _paymentIDs[1]);
     }
 
     /// @dev Executes a specific top up pull payment based on the payment ID - The pull payment should exist and the payment request
@@ -305,7 +301,7 @@ contract TopUpPullPayment is PayableOwnable {
     /// @param _paymentID - ID of the payment.
     /// @param _conversionRate - conversion rate with which the payment needs to take place
     function executeTopUpPayment(bytes32 _paymentID, uint256 _conversionRate)
-    public
+    external
     paymentExists(_paymentID)
     paymentNotCancelled(_paymentID)
     isPullPaymentExecutor(_paymentID)
@@ -321,7 +317,7 @@ contract TopUpPullPayment is PayableOwnable {
         payment.lastPaymentTimestamp = now;
         payment.totalSpent += payment.topUpAmountInCents;
 
-        token.transferFrom(payment.customerAddress, payment.treasuryAddress, amountInPMA);
+        require(token.transferFrom(payment.customerAddress, payment.treasuryAddress, amountInPMA));
 
         emit LogPullPaymentExecuted(
             payment.customerAddress,
@@ -349,7 +345,7 @@ contract TopUpPullPayment is PayableOwnable {
         bytes32 s,
         bytes32 _paymentID
     )
-    public
+    external
     isExecutor()
     paymentExists(_paymentID)
     paymentNotCancelled(_paymentID)
@@ -371,7 +367,7 @@ contract TopUpPullPayment is PayableOwnable {
     /// @param _paymentID - the ID of the payment for which total limit will be updated
     /// @param _newLimit - new total limit in FIAT cents
     function updateTotalLimit(bytes32 _paymentID, uint256 _newLimit)
-    public
+    external
     isCustomer(_paymentID)
     isValidNumber(_newLimit)
     isValidNewTotalLimit(_paymentID, _newLimit)
@@ -385,7 +381,7 @@ contract TopUpPullPayment is PayableOwnable {
     /// @dev method that retrieves the limits specified on the top up payment
     /// @param _paymentID - ID of the payment
     function retrieveLimits(bytes32 _paymentID)
-    public
+    external
     view
     returns (uint256 totalLimit, uint256 totalSpent)
     {
@@ -407,14 +403,13 @@ contract TopUpPullPayment is PayableOwnable {
         uint256[2] memory _paymentAmounts
     )
     internal
-    returns (bool)
     {
         TopUpPayment storage payment = pullPayments[_paymentIDs[0]];
         uint256 amountInPMA = calculatePMAFromFiat(_paymentAmounts[0], _paymentAmounts[1]);
 
         payment.lastPaymentTimestamp = now;
 
-        token.transferFrom(_addresses[0], _addresses[1], amountInPMA);
+        require(token.transferFrom(_addresses[0], _addresses[1], amountInPMA));
 
         emit LogPullPaymentExecuted(
             _addresses[0],
@@ -423,7 +418,6 @@ contract TopUpPullPayment is PayableOwnable {
             amountInPMA,
             _paymentAmounts[1]
         );
-        return true;
     }
 
     /// @dev Calculates the PMA Rate for the fiat currency specified - The rate is set every 10 minutes by our PMA server

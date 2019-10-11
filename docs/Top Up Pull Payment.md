@@ -13,15 +13,19 @@ The business allows their customers to subscribe to a top up billing model. The 
     3. Expiration time  - ***example:*** *expires on 31/12/2019*
     4. Combination of the above - ***example:*** *100$ in total & 20$ per day & expires on 31/12/2019*
 
+***NOTE: All the limits are related with the top up payments only, meaning that the initial payment is not taken into 
+consideration when we are checking against the limits for every top up payment.***
+
 #### Total Limits
-The customer is allowed to specify how much (s)he is willing to spend in total.   
+The customer is allowed to specify how much (s)he is willing to spend in total for the top up pull payments.
 ***Example:***
 The customer subscribed to a top up billing model which will charge him 10$ for purchasing 100 Credits.   
 The customer spends 75 Credits and the business can automatically charge the customer $7.50 to top up the 75 Credits.  
 
 The customer specifies that the maximum amount that (s)he is willing to spend in total in this top up billing model is 100$.  
 
-This means that the business can trigger the top up payment and pull PMA from the customer account only up until 100$ in PMA.
+This means that the business can trigger the top up payment and pull PMA from the customer account only up until 100$ in PMA. 
+This is valid only for the top up payments since the initial payment of 10$ is not taken into consideration for the total limits.
 The customer can increase/decrease the top up limit at any point.
 
 #### Time-Based Limits

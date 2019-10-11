@@ -1,9 +1,9 @@
 const topUpErrors = {
   zeroTokenAddress: 'Invalid address for token - ZERO_ADDRESS provided.',
-  zeroAddress: 'Invalid address - ZERO_ADDRESS provided.',
+  zeroAddress: 'ZERO_ADDRESS provided.',
   emptyString: 'Invalid string - is empty.',
-  lessThanZero: 'Invalid number - Must be higher than zero.',
-  higherThanOverflow: 'Invalid number - Must be lower than the overflow limit.',
+  lessThanZero: 'Must be higher than zero.',
+  higherThanOverflow: 'Must be lower than the overflow limit.',
   invalidByte32: 'Invalid byte32 value.',
   invalidTotalLimit: 'New total amount is less than the amount spent.',
   invalidTimeBasedLimit: 'New time based amount is less than the amount spent.',
