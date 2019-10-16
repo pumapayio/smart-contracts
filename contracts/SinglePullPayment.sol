@@ -86,7 +86,6 @@ contract SinglePullPayment is PayableOwnable {
     /// ===============================================================================================================
     ///                                      Constructor
     /// ===============================================================================================================
-
     /// @dev Contract constructor - sets the token address that the contract facilitates.
     /// @param _token Token Address.
     constructor(address _token)
