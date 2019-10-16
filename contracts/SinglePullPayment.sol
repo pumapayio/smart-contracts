@@ -32,7 +32,6 @@ contract SinglePullPayment is PayableOwnable {
     /// ===============================================================================================================
     ///                                      Constants
     /// ===============================================================================================================
-    uint256 constant private OVERFLOW_LIMITER_NUMBER = 10 ** 20;                    /// 1e^20 - Prevent numeric overflows
     bytes32 constant private EMPTY_BYTES32 = "";
 
     /// ===============================================================================================================
@@ -70,7 +69,6 @@ contract SinglePullPayment is PayableOwnable {
     }
     modifier isValidNumber(uint256 _amount) {
         require(_amount > 0, "Invalid amount - Must be higher than zero");
-        require(_amount <= OVERFLOW_LIMITER_NUMBER, "Invalid amount - Must be lower than the overflow limit.");
         _;
     }
     modifier isValidByte32(bytes32 _text) {
