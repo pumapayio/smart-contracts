@@ -80,7 +80,7 @@ bytes32 constant private TYPE_SINGLE_DYNAMIC_PULL_PAYMENT = "7";
 Adds an existing executor. It can be executed only by the owner.
 The balance of the owner is checked and if funding is needed 1 ETH is transferred.
 ```solidity
-function addExecutor(address _executor)
+function addExecutor(address payable _executor)
 public
 onlyOwner
 isValidAddress(_executor)
@@ -90,7 +90,7 @@ executorDoesNotExists(_executor)
 Removes an existing executor. It can be executed only by the owner.  
 The balance of the owner is checked and if funding is needed 1 ETH is transferred.
 ```solidity
-function removeExecutor(address _executor)
+function removeExecutor(address payable _executor)
 public
 onlyOwner
 isValidAddress(_executor)
