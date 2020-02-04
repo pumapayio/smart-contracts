@@ -10,7 +10,7 @@ import "./ownership/PayableOwnable.sol";
 /// We are also changing the `pullPayments` mapping. Instead of having address -> address -> PullPayment,
 /// ot will be address -> bytes32 -> PullPayment, with bytes32 being the pull payment ID.
 /// @author PumaPay Dev Team - <developers@pumapay.io>
-contract PumaPayPullPaymentV2_1 is PayableOwnable {
+contract PumaPayPullPaymentV2_2 is PayableOwnable {
     using SafeMath for uint256;
     /// ===============================================================================================================
     ///                                      Events

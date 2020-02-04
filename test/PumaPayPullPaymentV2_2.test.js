@@ -2,13 +2,13 @@ const {assertRevert} = require('./helpers/assertionHelper');
 const {transferETH} = require('./helpers/tranfserHelper');
 const {timeTravel, currentBlockTime} = require('./helpers/timeHelper');
 const {
-  signRegistrationV2_1,
-  signDeletionV2_1,
+  signRegistrationV2_2,
+  signDeletionV2_2,
   getVRS
 } = require('./helpers/signatureHelpers');
 const PumaPayToken = artifacts.require('MockMintableToken');
 
-const PumaPayPullPayment = artifacts.require('PumaPayPullPaymentV2_1');
+const PumaPayPullPayment = artifacts.require('PumaPayPullPaymentV2_2');
 const BigNumber = web3.BigNumber;
 
 require('chai')
@@ -38,7 +38,7 @@ const CLIENT_THREE_PRIVATE_KEY = '0x7f201ee20596c003b979ba39018b08cd7920abbc04a9
 
 const GAS_PRICE = 1000000000;
 
-contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
+contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
   const deployerAccount = accounts[ 0 ];
   const owner = accounts[ 1 ];
   const executorOne = accounts[ 2 ];
@@ -305,7 +305,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should add the pull payment for the beneficiary in the active payments array', async () => {
-      const signature = await signRegistrationV2_1(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -341,7 +341,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should execute the single pull payment', async () => {
-      const signature = await signRegistrationV2_1(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -365,7 +365,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await signRegistrationV2_1(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -383,7 +383,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await signRegistrationV2_1(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       singlePullPayment.currency = 'USD';
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -402,7 +402,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the payment already exists', async () => {
-      const signature = await signRegistrationV2_1(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -433,7 +433,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPaymentRegistered" event', async () => {
-      const signature = await signRegistrationV2_1(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -460,7 +460,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPullPaymentExecution" event', async () => {
-      const signature = await signRegistrationV2_1(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(singlePullPayment, CLIENT_ONE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -507,7 +507,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should add the pull payment for the beneficiary in the active payments array', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -543,7 +543,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should execute the first payment from the recurring pull payment', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -567,7 +567,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should execute payments from the recurring pull payment: first payment and next one', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -604,7 +604,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
 
     it('should execute payments from the recurring pull payment: first payment, next one with third execution failing', async () => {
       recurringPullPayment.numberOfPayments = 2;
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -648,7 +648,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -666,7 +666,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       recurringPullPayment.currency = 'EUR';
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -685,7 +685,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPaymentRegistered" event', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -712,7 +712,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPullPaymentExecution" event', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -759,7 +759,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should add the pull payment for the beneficiary in the active payments array', async () => {
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -810,7 +810,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should execute the first payment from the recurring pull payment', async () => {
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -834,7 +834,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should execute payments from the recurring pull payment: first payment and next one', async () => {
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -871,7 +871,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
 
     it('should execute payments from the recurring pull payment: initial payment, next two payments with third execution failing', async () => {
       recurringWithInitialAmount.numberOfPayments = 2;
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -933,7 +933,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -951,7 +951,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       recurringWithInitialAmount.currency = 'EUR';
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -970,7 +970,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPaymentRegistered" event', async () => {
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -997,7 +997,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPullPaymentExecution" event', async () => {
-      const signature = await signRegistrationV2_1(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithInitialAmount, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -1044,7 +1044,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should add the pull payment for the beneficiary in the active payments array', async () => {
-      const signature = await signRegistrationV2_1(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1094,7 +1094,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should execute payments from the recurring pull payment after the free trial has passed', async () => {
-      const signature = await signRegistrationV2_1(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1130,7 +1130,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
 
     it('should execute payments from the recurring pull payment after free trial: two payments with third execution failing', async () => {
       recurringWithFreeTrial.numberOfPayments = 2;
-      const signature = await signRegistrationV2_1(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1182,7 +1182,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert if the free trial has not passed', async () => {
-      const signature = await signRegistrationV2_1(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1211,7 +1211,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await signRegistrationV2_1(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -1229,7 +1229,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await signRegistrationV2_1(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       recurringWithFreeTrial.currency = 'EUR';
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -1248,7 +1248,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPaymentRegistered" event', async () => {
-      const signature = await signRegistrationV2_1(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithFreeTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -1291,7 +1291,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should add the pull payment for the beneficiary in the active payments array', async () => {
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1342,7 +1342,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should execute the initial payment for the paid trial', async () => {
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1367,7 +1367,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
 
     it('should execute payments from the recurring pull payment with paid trial: intial payment, two recurring payments with third execution failing', async () => {
       recurringWithPaidTrial.numberOfPayments = 2;
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1420,7 +1420,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('pull payment execution for recurring payment should revert if the paid trial has not passed', async () => {
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1449,7 +1449,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -1467,7 +1467,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       recurringWithPaidTrial.fiatAmountInCents = 50;
       await assertRevert(pumaPayPullPayment.registerPullPayment(
@@ -1486,7 +1486,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPaymentRegistered" event', async () => {
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -1513,7 +1513,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPullPaymentExecution" event', async () => {
-      const signature = await signRegistrationV2_1(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringWithPaidTrial, CLIENT_THREE_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentRegistration = await pumaPayPullPayment.registerPullPayment(
@@ -1559,7 +1559,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
       });
     });
     beforeEach('register to a pull payment recurring pull payment', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1576,7 +1576,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should set the cancel date of the pull payment for the paymentExecutorOne to NOW', async () => {
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.deletePullPayment(
@@ -1594,7 +1594,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1608,7 +1608,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the payment for the beneficiary does not exists', async () => {
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1622,7 +1622,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should revert when the deletion pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1636,7 +1636,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should emit a "LogPaymentCancelled" event', async () => {
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentDeletion = await pumaPayPullPayment.deletePullPayment(
@@ -1674,7 +1674,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
       });
     });
     beforeEach('register to a pull payment recurring pull payment', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -1828,7 +1828,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
       await timeTravel(4 * recurringPullPayment.frequency + 1);
 
       // customer cancel the pull payment
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       await pumaPayPullPayment.deletePullPayment(
         sigVRS.v,
@@ -1883,7 +1883,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     });
 
     it('should fail when pull payment was cancelled', async () => {
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.deletePullPayment(
@@ -2043,7 +2043,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const transaction = await pumaPayPullPayment.registerPullPayment(
@@ -2100,7 +2100,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
       });
     });
     beforeEach('Add single pull payment', async () => {
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -2133,7 +2133,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
-      const signature = await signDeletionV2_1(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const transaction = await pumaPayPullPayment.deletePullPayment(
@@ -2184,7 +2184,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     it('should execute a pull payment of 1 BILLION FIAT with a conversion rate of 1 PMA = 100k EUR', async () => {
       recurringPullPayment.fiatAmountInCents = 100000000000; // 1 billion in FIAT cents
       recurringPullPayment.initialConversionRate = DECIMAL_FIXER + '00000'; // 1 PMA = 100k EUR // 10^15
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
@@ -2223,7 +2223,7 @@ contract('PumaPay Pull Payment V2.1 Contract', async (accounts) => {
     it('should execute a pull payment of 100k FIAT with a conversion rate of 1 PMA = 0.000001 FIAT', async () => {
       recurringPullPayment.fiatAmountInCents = 10000000; // 100k FIAT in cents
       recurringPullPayment.initialConversionRate = '100000'; // 1 PMA = 0.00001 FIAT // 0.00001 * DECIMAL_FIXER
-      const signature = await signRegistrationV2_1(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signRegistrationV2_2(recurringPullPayment, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.registerPullPayment(
