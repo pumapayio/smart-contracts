@@ -2,8 +2,12 @@ const EthCrypto = require('eth-crypto');
 const Web3 = require('web3');
 const web3 = new Web3('http://localhost:8545');
 
-const signRegistrationV2_1 = async (pullPayment, privateKey) => {
+const signRegistrationV2_2 = async (pullPayment, privateKey) => {
   const messageHash = web3.utils.soliditySha3(
+    {
+      type: 'address',
+      value: pullPayment.pullPaymentExecutorAddress
+    },
     {
       type: 'bytes32',
       value: pullPayment.paymentID
@@ -43,10 +47,13 @@ const signRegistrationV2_1 = async (pullPayment, privateKey) => {
   return signedMessage;
 };
 
-const signDeletionV2_1 = async (paymentID, privateKey) => {
+const signDeletionV2_2 = async (paymentID, executorAddress, privateKey) => {
   const messageHash = web3.utils.soliditySha3({
     type: 'bytes32',
     value: paymentID
+  }, {
+    type: 'address',
+    value: executorAddress
   });
 
   const signedMessage = EthCrypto.sign(
@@ -57,6 +64,6 @@ const signDeletionV2_1 = async (paymentID, privateKey) => {
 };
 
 module.exports = {
-  signRegistrationV2_1,
-  signDeletionV2_1
+  signRegistrationV2_2,
+  signDeletionV2_2
 };

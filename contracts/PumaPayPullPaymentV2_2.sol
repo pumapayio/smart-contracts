@@ -63,7 +63,7 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
     /// ===============================================================================================================
     IERC20 public token;
     mapping(address => bool) public executors;
-    mapping(address => mapping(bytes32 => PullPayment)) public pullPayments;
+    mapping(bytes32 => PullPayment) public pullPayments;
 
     struct PullPayment {
         bytes32[3] paymentIds;                  /// [0] paymentID / [1] businessID / [2] uniqueReferenceID
@@ -80,6 +80,7 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
         uint256 lastPaymentTimestamp;           /// timestamp of last payment
         uint256 cancelTimestamp;                /// timestamp the payment was cancelled
         address treasuryAddress;                /// address which pma tokens will be transfer to on execution
+        address executorAddress;                /// address that can execute the pull payment
     }
     /// ===============================================================================================================
     ///                                      Modifiers
@@ -96,34 +97,33 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
         require(!executors[_executor], "Executor already exists.");
         _;
     }
-    modifier paymentExists(address _customerAddress, bytes32 _paymentID) {
-        require(pullPayments[_customerAddress][_paymentID].paymentIds[0] != "", "Pull Payment does not exists.");
+    modifier paymentExists(bytes32 _paymentID) {
+        require(pullPayments[_paymentID].paymentIds[0] != "", "Pull Payment does not exists.");
         _;
     }
-    modifier paymentNotCancelled(address _customerAddress, bytes32 _paymentID) {
-        require(pullPayments[_customerAddress][_paymentID].cancelTimestamp == 0, "Pull Payment is cancelled");
+    modifier paymentNotCancelled(bytes32 _paymentID) {
+        require(pullPayments[_paymentID].cancelTimestamp == 0, "Pull Payment is cancelled");
         _;
     }
     modifier isValidPullPaymentExecutionRequest(
-        address _customerAddress,
         bytes32 _paymentID,
         uint256 _paymentNumber) {
-        require(pullPayments[_customerAddress][_paymentID].numberOfPayments == _paymentNumber,
+        require(pullPayments[_paymentID].numberOfPayments == _paymentNumber,
             "Invalid pull payment execution request - Pull payment number of payment is invalid");
-        require((pullPayments[_customerAddress][_paymentID].initialPaymentAmountInCents > 0 ||
-        (now >= pullPayments[_customerAddress][_paymentID].startTimestamp &&
-        now >= pullPayments[_customerAddress][_paymentID].nextPaymentTimestamp)
+        require((pullPayments[_paymentID].initialPaymentAmountInCents > 0 ||
+        (now >= pullPayments[_paymentID].startTimestamp &&
+        now >= pullPayments[_paymentID].nextPaymentTimestamp)
             ), "Invalid pull payment execution request - Time of execution is invalid."
         );
-        require(pullPayments[_customerAddress][_paymentID].numberOfPayments > 0,
+        require(pullPayments[_paymentID].numberOfPayments > 0,
             "Invalid pull payment execution request - Number of payments is zero.");
         require(
-            (pullPayments[_customerAddress][_paymentID].cancelTimestamp == 0 ||
-        pullPayments[_customerAddress][_paymentID].cancelTimestamp >
-        pullPayments[_customerAddress][_paymentID].nextPaymentTimestamp),
+            (pullPayments[_paymentID].cancelTimestamp == 0 ||
+        pullPayments[_paymentID].cancelTimestamp >
+        pullPayments[_paymentID].nextPaymentTimestamp),
             "Invalid pull payment execution request - Pull payment is cancelled");
         require(keccak256(
-            abi.encodePacked(pullPayments[_customerAddress][_paymentID].paymentIds[0])
+            abi.encodePacked(pullPayments[_paymentID].paymentIds[0])
         ) == keccak256(abi.encodePacked(_paymentID)),
             "Invalid pull payment execution request - Payment ID not matching.");
         _;
@@ -220,7 +220,7 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
         bytes32 r,
         bytes32 s,
         bytes32[4] memory _paymentDetails, // 0 paymentID, 1 businessID, 2 uniqueReferenceID, 3 paymentType
-        address[2] memory _addresses, // 0 customer, 1 treasury
+        address[3] memory _addresses, // 0 customer, 1 executor, 2 treasury
         uint256[3] memory _paymentAmounts, // 0 _initialConversionRate, 1 _fiatAmountInCents, 2 _initialPaymentAmountInCents
         uint256[4] memory _paymentTimestamps, // 0 _frequency, 1 _numberOfPayments, 2 _startTimestamp, 3 _trialPeriod
         string memory _currency
@@ -228,7 +228,7 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
     public
     isExecutor()
     {
-        require(pullPayments[_addresses[0]][_paymentDetails[0]].paymentIds[0] == "", "Pull Payment already exists.");
+        require(pullPayments[_paymentDetails[0]].paymentIds[0] == "", "Pull Payment already exists.");
         require(_paymentDetails[0] != EMPTY_BYTES32, "Payment ID is empty.");
         require(_paymentDetails[1] != EMPTY_BYTES32, "Business ID is empty.");
         require(_paymentDetails[2] != EMPTY_BYTES32, "Unique Reference ID is empty.");
@@ -250,73 +250,74 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
         require(_paymentTimestamps[2] <= OVERFLOW_LIMITER_NUMBER, "Payment start time is higher thant the overflow limit.");
         require(_paymentTimestamps[3] <= OVERFLOW_LIMITER_NUMBER, "Payment trial period is higher thant the overflow limit.");
         require(bytes(_currency).length > 0, "Currency is empty");
-        pullPayments[_addresses[0]][_paymentDetails[0]].paymentIds[0] = _paymentDetails[0];
-        pullPayments[_addresses[0]][_paymentDetails[0]].paymentType = _paymentDetails[3];
-        pullPayments[_addresses[0]][_paymentDetails[0]].treasuryAddress = _addresses[1];
-        pullPayments[_addresses[0]][_paymentDetails[0]].initialConversionRate = _paymentAmounts[0];
-        pullPayments[_addresses[0]][_paymentDetails[0]].fiatAmountInCents = _paymentAmounts[1];
-        pullPayments[_addresses[0]][_paymentDetails[0]].initialPaymentAmountInCents = _paymentAmounts[2];
-        pullPayments[_addresses[0]][_paymentDetails[0]].frequency = _paymentTimestamps[0];
-        pullPayments[_addresses[0]][_paymentDetails[0]].numberOfPayments = _paymentTimestamps[1];
-        pullPayments[_addresses[0]][_paymentDetails[0]].startTimestamp = _paymentTimestamps[2];
-        pullPayments[_addresses[0]][_paymentDetails[0]].trialPeriod = _paymentTimestamps[3];
-        pullPayments[_addresses[0]][_paymentDetails[0]].currency = _currency;
+        pullPayments[_paymentDetails[0]].paymentIds[0] = _paymentDetails[0];
+        pullPayments[_paymentDetails[0]].paymentType = _paymentDetails[3];
+        pullPayments[_paymentDetails[0]].executorAddress = _addresses[1];
+        pullPayments[_paymentDetails[0]].treasuryAddress = _addresses[2];
+        pullPayments[_paymentDetails[0]].initialConversionRate = _paymentAmounts[0];
+        pullPayments[_paymentDetails[0]].fiatAmountInCents = _paymentAmounts[1];
+        pullPayments[_paymentDetails[0]].initialPaymentAmountInCents = _paymentAmounts[2];
+        pullPayments[_paymentDetails[0]].frequency = _paymentTimestamps[0];
+        pullPayments[_paymentDetails[0]].numberOfPayments = _paymentTimestamps[1];
+        pullPayments[_paymentDetails[0]].startTimestamp = _paymentTimestamps[2];
+        pullPayments[_paymentDetails[0]].trialPeriod = _paymentTimestamps[3];
+        pullPayments[_paymentDetails[0]].currency = _currency;
         require(isValidRegistration(
                 v,
                 r,
                 s,
                 _addresses[0],
-                pullPayments[_addresses[0]][_paymentDetails[0]]),
+                pullPayments[_paymentDetails[0]]),
             "Invalid pull payment registration - ECRECOVER_FAILED"
         );
-        pullPayments[_addresses[0]][_paymentDetails[0]].paymentIds[1] = _paymentDetails[1];
-        pullPayments[_addresses[0]][_paymentDetails[0]].paymentIds[2] = _paymentDetails[2];
-        pullPayments[_addresses[0]][_paymentDetails[0]].cancelTimestamp = 0;
+        pullPayments[_paymentDetails[0]].paymentIds[1] = _paymentDetails[1];
+        pullPayments[_paymentDetails[0]].paymentIds[2] = _paymentDetails[2];
+        pullPayments[_paymentDetails[0]].cancelTimestamp = 0;
         /// @dev In case of a free trial period the start timestamp of the payment
         /// is the start timestamp that was signed by the customer + the trial period.
         /// A payment is not needed during registration.
         if (_paymentDetails[3] == TYPE_PULL_PAYMENT_WITH_FREE_TRIAL) {
-            pullPayments[_addresses[0]][_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[3];
-            pullPayments[_addresses[0]][_paymentDetails[0]].lastPaymentTimestamp = 0;
+            pullPayments[_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[3];
+            pullPayments[_paymentDetails[0]].lastPaymentTimestamp = 0;
             /// @dev In case of a recurring payment with initial amount
             /// the first payment of the 'initialPaymentAmountInCents' and 'initialConversionRate'
             /// will happen on registration.
             /// Once it happens, we set the next payment timestamp as
             /// the start timestamp signed by the customer + trial period
         } else if (_paymentDetails[3] == TYPE_RECURRING_PULL_PAYMENT_WITH_INITIAL) {
-            executePullPaymentOnRegistration(
-                [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], // 0 paymentID, 1 businessID, 2 uniqueReferenceID
-                [_addresses[0], _addresses[1]], // 0 Customer Address, 1 Treasury Address
-                [_paymentAmounts[2], _paymentAmounts[0]] // 0 initialPaymentAmountInCents, 1 initialConversionRate
-            );
-            pullPayments[_addresses[0]][_paymentDetails[0]].lastPaymentTimestamp = now;
-            pullPayments[_addresses[0]][_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[0];
+            require(executePullPaymentOnRegistration(
+                    [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], // 0 paymentID, 1 businessID, 2 uniqueReferenceID
+                    [_addresses[0], _addresses[1], _addresses[2]], // 0 Customer Address, 1 executor Address, 2 Treasury Address
+                    [_paymentAmounts[2], _paymentAmounts[0]] // 0 initialPaymentAmountInCents, 1 initialConversionRate
+                ));
+            pullPayments[_paymentDetails[0]].lastPaymentTimestamp = now;
+            pullPayments[_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[0];
             /// @dev In the case od a paid trial, the first payment happens
             /// on registration using the 'initialPaymentAmountInCents' and 'initialConversionRate'.
             /// When the first payment takes place we set the next payment timestamp
             /// as the start timestamp that was signed by the customer + the trial period
         } else if (_paymentDetails[3] == TYPE_PULL_PAYMENT_WITH_PAID_TRIAL) {
-            executePullPaymentOnRegistration(
-                [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], /// paymentID , businessID , uniqueReferenceID
-                [_addresses[0], _addresses[1]], /// 0 Customer Address, 1 Treasury Address
-                [_paymentAmounts[2], _paymentAmounts[0]] /// 0 initialPaymentAmountInCents, 1 initialConversionRate
-            );
-            pullPayments[_addresses[0]][_paymentDetails[0]].lastPaymentTimestamp = now;
-            pullPayments[_addresses[0]][_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[3];
+            require(executePullPaymentOnRegistration(
+                    [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], /// paymentID , businessID , uniqueReferenceID
+                    [_addresses[0], _addresses[1], _addresses[2]], // 0 Customer Address, 1 executor Address, 2 Treasury Address
+                    [_paymentAmounts[2], _paymentAmounts[0]] /// 0 initialPaymentAmountInCents, 1 initialConversionRate
+                ));
+            pullPayments[_paymentDetails[0]].lastPaymentTimestamp = now;
+            pullPayments[_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[3];
             /// @dev For the rest of the cases the first payment happens on registration
             /// using the 'fiatAmountInCents' and 'initialConversionRate'.
             /// When the first payment takes place, the number of payment is decreased by 1,
             /// and the next payment timestamp is set to the start timestamp signed by the
             /// customer + the frequency of the payment.
         } else {
-            executePullPaymentOnRegistration(
-                [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], /// paymentID , businessID , uniqueReferenceID
-                [_addresses[0], _addresses[1]], /// Customer Address, Treasury Address
-                [_paymentAmounts[1], _paymentAmounts[0]] /// fiatAmountInCents, initialConversionRate
-            );
-            pullPayments[_addresses[0]][_paymentDetails[0]].lastPaymentTimestamp = now;
-            pullPayments[_addresses[0]][_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[0];
-            pullPayments[_addresses[0]][_paymentDetails[0]].numberOfPayments = _paymentTimestamps[1] - 1;
+            require(executePullPaymentOnRegistration(
+                    [_paymentDetails[0], _paymentDetails[1], _paymentDetails[2]], /// paymentID , businessID , uniqueReferenceID
+                    [_addresses[0], _addresses[1], _addresses[2]], // 0 Customer Address, 1 executor Address, 2 Treasury Address
+                    [_paymentAmounts[1], _paymentAmounts[0]] /// fiatAmountInCents, initialConversionRate
+                ));
+            pullPayments[_paymentDetails[0]].lastPaymentTimestamp = now;
+            pullPayments[_paymentDetails[0]].nextPaymentTimestamp = _paymentTimestamps[2] + _paymentTimestamps[0];
+            pullPayments[_paymentDetails[0]].numberOfPayments = _paymentTimestamps[1] - 1;
         }
         if (isFundingNeeded(msg.sender)) {
             msg.sender.transfer(FUNDING_AMOUNT);
@@ -336,21 +337,23 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
     /// @param s - S output of ECDSA signature.
     /// @param _paymentID - ID of the payment.
     /// @param _customerAddress - customer address that is linked to this pull payment.
+    /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
     function deletePullPayment(
         uint8 v,
         bytes32 r,
         bytes32 s,
         bytes32 _paymentID,
-        address _customerAddress
+        address _customerAddress,
+        address _pullPaymentExecutor
     )
     public
     isExecutor()
-    paymentExists(_customerAddress, _paymentID)
-    paymentNotCancelled(_customerAddress, _paymentID)
+    paymentExists(_paymentID)
+    paymentNotCancelled(_paymentID)
     isValidDeletionRequest(_paymentID, _customerAddress)
     {
-        require(isValidDeletion(v, r, s, _paymentID, _customerAddress), "Invalid deletion - ECRECOVER_FAILED.");
-        pullPayments[_customerAddress][_paymentID].cancelTimestamp = now;
+        require(isValidDeletion(v, r, s, _paymentID, _customerAddress, _pullPaymentExecutor), "Invalid deletion - ECRECOVER_FAILED.");
+        pullPayments[_paymentID].cancelTimestamp = now;
         if (isFundingNeeded(msg.sender)) {
             msg.sender.transfer(FUNDING_AMOUNT);
             emit LogSmartContractActorFunded("executor", msg.sender, now);
@@ -358,8 +361,8 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
         emit LogPaymentCancelled(
             _customerAddress,
             _paymentID,
-            pullPayments[_customerAddress][_paymentID].paymentIds[1],
-            pullPayments[_customerAddress][_paymentID].paymentIds[2]
+            pullPayments[_paymentID].paymentIds[1],
+            pullPayments[_paymentID].paymentIds[2]
         );
     }
     /// ===============================================================================================================
@@ -381,26 +384,26 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
     /// @param _paymentDetails - Payment details - [0] conversion rate // [1] payment Number
     function executePullPayment(address _customerAddress, bytes32 _paymentID, uint256[2] memory _paymentDetails)
     public
-    paymentExists(_customerAddress, _paymentID)
-    isValidPullPaymentExecutionRequest(_customerAddress, _paymentID, _paymentDetails[1])
+    paymentExists(_paymentID)
+    isValidPullPaymentExecutionRequest(_paymentID, _paymentDetails[1])
     validAmount(_paymentDetails[0])
     returns (bool)
     {
         uint256 conversionRate = _paymentDetails[0];
         address customerAddress = _customerAddress;
-        bytes32[3] memory paymentIds = pullPayments[customerAddress][_paymentID].paymentIds;
-        address treasury = pullPayments[customerAddress][_paymentID].treasuryAddress;
-        uint256 amountInPMA = calculatePMAFromFiat(pullPayments[customerAddress][paymentIds[0]].fiatAmountInCents, conversionRate);
+        bytes32[3] memory paymentIds = pullPayments[_paymentID].paymentIds;
+        address treasury = pullPayments[_paymentID].treasuryAddress;
+        uint256 amountInPMA = calculatePMAFromFiat(pullPayments[paymentIds[0]].fiatAmountInCents, conversionRate);
 
-        pullPayments[customerAddress][paymentIds[0]].nextPaymentTimestamp =
-        pullPayments[customerAddress][paymentIds[0]].nextPaymentTimestamp + pullPayments[customerAddress][paymentIds[0]].frequency;
-        pullPayments[customerAddress][paymentIds[0]].numberOfPayments = pullPayments[customerAddress][paymentIds[0]].numberOfPayments - 1;
-        pullPayments[customerAddress][paymentIds[0]].lastPaymentTimestamp = now;
-        token.transferFrom(
-            customerAddress,
-            treasury,
-            amountInPMA
-        );
+        pullPayments[paymentIds[0]].nextPaymentTimestamp =
+        pullPayments[paymentIds[0]].nextPaymentTimestamp + pullPayments[paymentIds[0]].frequency;
+        pullPayments[paymentIds[0]].numberOfPayments = pullPayments[paymentIds[0]].numberOfPayments - 1;
+        pullPayments[paymentIds[0]].lastPaymentTimestamp = now;
+        require(token.transferFrom(
+                customerAddress,
+                treasury,
+                amountInPMA
+            ));
         emit LogPullPaymentExecuted(
             customerAddress,
             paymentIds[0],
@@ -419,13 +422,13 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
     /// unless the pull payment has free trial. Check the comments on 'registerPullPayment' method for more details.
     function executePullPaymentOnRegistration(
         bytes32[3] memory _paymentDetails, // 0 paymentID, 1 businessID, 2 uniqueReferenceID
-        address[2] memory _addresses, // 0 customer Address, 1 treasury Address
+        address[3] memory _addresses, // 0 customer Address, 1, executor Address, 2 treasury Address
         uint256[2] memory _paymentAmounts // 0 _fiatAmountInCents, 1 _conversionRate
     )
     internal
     returns (bool) {
         uint256 amountInPMA = calculatePMAFromFiat(_paymentAmounts[0], _paymentAmounts[1]);
-        token.transferFrom(_addresses[0], _addresses[1], amountInPMA);
+        require(token.transferFrom(_addresses[0], _addresses[2], amountInPMA));
         emit LogPullPaymentExecuted(
             _addresses[0],
             _paymentDetails[0],
@@ -488,6 +491,7 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
         return ecrecover(
             keccak256(
                 abi.encodePacked(
+                    _pullPayment.executorAddress,
                     _pullPayment.paymentIds[0],
                     _pullPayment.paymentType,
                     _pullPayment.treasuryAddress,
@@ -509,13 +513,15 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
     /// @param s - S output of ECDSA signature.
     /// @param _paymentID - ID of the payment.
     /// @param _customerAddress - customer address that is linked to this pull payment.
+    /// @param _pullPaymentExecutor - address that is allowed to execute this pull payment.
     /// @return bool - if the v, r, s params with the hashed params match the customer address
     function isValidDeletion(
         uint8 v,
         bytes32 r,
         bytes32 s,
         bytes32 _paymentID,
-        address _customerAddress
+        address _customerAddress,
+        address _pullPaymentExecutor
     )
     internal
     view
@@ -524,11 +530,12 @@ contract PumaPayPullPaymentV2_2 is PayableOwnable {
         return ecrecover(
             keccak256(
                 abi.encodePacked(
-                    _paymentID
+                    _paymentID,
+                    _pullPaymentExecutor
                 )
             ), v, r, s) == _customerAddress
         && keccak256(
-            abi.encodePacked(pullPayments[_customerAddress][_paymentID].paymentIds[0])
+            abi.encodePacked(pullPayments[_paymentID].paymentIds[0])
         ) == keccak256(abi.encodePacked(_paymentID)
         );
     }

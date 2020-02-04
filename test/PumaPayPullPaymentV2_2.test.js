@@ -57,6 +57,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     uniqueReferenceID: web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_1'), 64),
     paymentType: web3.utils.padRight(web3.utils.fromAscii('2'), 64),
     client: clientOne,
+    pullPaymentExecutorAddress: paymentExecutorOne,
     currency: 'EUR',
     initialConversionRate: EUR_EXCHANGE_RATE,
     initialPaymentAmountInCents: 0,
@@ -74,6 +75,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     uniqueReferenceID: web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_2'), 64),
     paymentType: web3.utils.padRight(web3.utils.fromAscii('3'), 64),
     client: clientTwo,
+    pullPaymentExecutorAddress: paymentExecutorTwo,
     currency: 'USD',
     initialConversionRate: USD_EXCHANGE_RATE,
     initialPaymentAmountInCents: 0,
@@ -91,6 +93,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     uniqueReferenceID: web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_3'), 64),
     paymentType: web3.utils.padRight(web3.utils.fromAscii('4'), 64),
     client: clientThree,
+    pullPaymentExecutorAddress: paymentExecutorThree,
     currency: 'USD',
     initialConversionRate: USD_EXCHANGE_RATE,
     initialPaymentAmountInCents: 100, // 1.00 USD in cents
@@ -108,15 +111,16 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     uniqueReferenceID: web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_4'), 64),
     paymentType: web3.utils.padRight(web3.utils.fromAscii('5'), 64),
     client: clientThree,
+    pullPaymentExecutorAddress: paymentExecutorThree,
     currency: 'USD',
     initialConversionRate: USD_EXCHANGE_RATE,
     initialPaymentAmountInCents: 0,
     fiatAmountInCents: 200, // 2.00 USD in cents
     frequency: 2 * DAY,
     numberOfPayments: 10,
-    startTimestamp: Math.floor(Date.now() / 1000),
+    startTimestamp: Math.floor(Date.now() / 1000) + 2 * DAY,
     treasuryAddress: treasuryAddress,
-    trialPeriod: 2 * DAY
+    trialPeriod: DAY
   };
 
   let recurringWithPaidTrial = {
@@ -125,13 +129,14 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     uniqueReferenceID: web3.utils.padRight(web3.utils.fromAscii('uniqueReferenceID_6'), 64),
     paymentType: web3.utils.padRight(web3.utils.fromAscii('6'), 64),
     client: clientThree,
+    pullPaymentExecutorAddress: paymentExecutorThree,
     currency: 'USD',
     initialConversionRate: USD_EXCHANGE_RATE,
     initialPaymentAmountInCents: 100, // 1.00 USD
     fiatAmountInCents: 200, // 2.00 USD in cents
     frequency: 2 * DAY,
     numberOfPayments: 10,
-    startTimestamp: Math.floor(Date.now() / 1000),
+    startTimestamp: Math.floor(Date.now() / 1000) + 2 * DAY,
     treasuryAddress: treasuryAddress,
     trialPeriod: DAY
   };
@@ -165,129 +170,129 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     });
   });
 
-  describe('Deploying', async () => {
-    it('PumaPay Pull Payment owner should be the address that was specified on contract deployment', async () => {
-      const accountOwner = await pumaPayPullPayment.owner();
+  // describe('Deploying', async () => {
+  //   it('PumaPay Pull Payment owner should be the address that was specified on contract deployment', async () => {
+  //     const accountOwner = await pumaPayPullPayment.owner();
+  //
+  //     assert.equal(accountOwner.toString(), owner);
+  //   });
+  //
+  //   it('PumaPay Pull Payment token should be the token address specified on contract deployment', async () => {
+  //     const accountToken = await pumaPayPullPayment.token();
+  //
+  //     assert.equal(accountToken, token.address);
+  //   });
+  //
+  //   it('PumaPay Pull Payment deployment should revert when the token is a ZERO address', async () => {
+  //     await assertRevert(PumaPayPullPayment
+  //       .new(ZERO_ADDRESS, {
+  //         from: deployerAccount
+  //       }));
+  //   });
+  // });
 
-      assert.equal(accountOwner.toString(), owner);
-    });
+  // describe('Add executor', async () => {
+  //   beforeEach('Transfer ETH to smart contract', async () => {
+  //     await transferETH(1, deployerAccount, pumaPayPullPayment.address);
+  //   });
+  //
+  //   it('should set the executor specified to true', async () => {
+  //     await pumaPayPullPayment.addExecutor(executorOne,
+  //       {
+  //         from: owner
+  //       });
+  //     const executor = await pumaPayPullPayment.executors(executorOne);
+  //
+  //     assert.equal(executor, true);
+  //   });
+  //
+  //   it('should NOT transfer ETHER to the executor account for paying gas fees if he holds enough funds', async () => {
+  //     const executorBalanceBefore = await web3.eth.getBalance(executorOne);
+  //     await pumaPayPullPayment.addExecutor(executorOne, {
+  //       from: owner
+  //     });
+  //     const executorBalanceAfter = await web3.eth.getBalance(executorOne);
+  //     const expectedBalance = web3.utils.fromWei(String(executorBalanceAfter), 'ether') - web3.utils.fromWei(String(executorBalanceBefore), 'ether');
+  //
+  //     assert.equal(String(expectedBalance), web3.utils.fromWei('0', 'ether'));
+  //   });
+  //
+  //   it('should revert when the executor is a ZERO address', async () => {
+  //     await assertRevert(
+  //       pumaPayPullPayment.addExecutor(ZERO_ADDRESS, {
+  //         from: owner
+  //       })
+  //     );
+  //   });
+  //
+  //   it('should revert when adding the same executor', async () => {
+  //     await pumaPayPullPayment.addExecutor(executorOne, {
+  //       from: owner
+  //     });
+  //     await assertRevert(
+  //       pumaPayPullPayment.addExecutor(executorOne, {
+  //         from: owner
+  //       })
+  //     );
+  //   });
+  //
+  //   it('should revert if NOT executed by the owner', async () => {
+  //     await pumaPayPullPayment.addExecutor(executorOne, {
+  //       from: owner
+  //     });
+  //
+  //     await assertRevert(
+  //       pumaPayPullPayment.addExecutor(executorTwo, {
+  //         from: executorOne
+  //       })
+  //     );
+  //   });
+  // });
 
-    it('PumaPay Pull Payment token should be the token address specified on contract deployment', async () => {
-      const accountToken = await pumaPayPullPayment.token();
-
-      assert.equal(accountToken, token.address);
-    });
-
-    it('PumaPay Pull Payment deployment should revert when the token is a ZERO address', async () => {
-      await assertRevert(PumaPayPullPayment
-        .new(ZERO_ADDRESS, {
-          from: deployerAccount
-        }));
-    });
-  });
-
-  describe('Add executor', async () => {
-    beforeEach('Transfer ETH to smart contract', async () => {
-      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
-    });
-
-    it('should set the executor specified to true', async () => {
-      await pumaPayPullPayment.addExecutor(executorOne,
-        {
-          from: owner
-        });
-      const executor = await pumaPayPullPayment.executors(executorOne);
-
-      assert.equal(executor, true);
-    });
-
-    it('should NOT transfer ETHER to the executor account for paying gas fees if he holds enough funds', async () => {
-      const executorBalanceBefore = await web3.eth.getBalance(executorOne);
-      await pumaPayPullPayment.addExecutor(executorOne, {
-        from: owner
-      });
-      const executorBalanceAfter = await web3.eth.getBalance(executorOne);
-      const expectedBalance = web3.utils.fromWei(String(executorBalanceAfter), 'ether') - web3.utils.fromWei(String(executorBalanceBefore), 'ether');
-
-      assert.equal(String(expectedBalance), web3.utils.fromWei('0', 'ether'));
-    });
-
-    it('should revert when the executor is a ZERO address', async () => {
-      await assertRevert(
-        pumaPayPullPayment.addExecutor(ZERO_ADDRESS, {
-          from: owner
-        })
-      );
-    });
-
-    it('should revert when adding the same executor', async () => {
-      await pumaPayPullPayment.addExecutor(executorOne, {
-        from: owner
-      });
-      await assertRevert(
-        pumaPayPullPayment.addExecutor(executorOne, {
-          from: owner
-        })
-      );
-    });
-
-    it('should revert if NOT executed by the owner', async () => {
-      await pumaPayPullPayment.addExecutor(executorOne, {
-        from: owner
-      });
-
-      await assertRevert(
-        pumaPayPullPayment.addExecutor(executorTwo, {
-          from: executorOne
-        })
-      );
-    });
-  });
-
-  describe('Remove executor', async () => {
-    beforeEach('Transfer ETH to smart contract', async () => {
-      await transferETH(1, deployerAccount, pumaPayPullPayment.address);
-    });
-
-    beforeEach('add an executor', async () => {
-      await pumaPayPullPayment.addExecutor(executorOne, {
-        from: owner
-      });
-    });
-
-    it('should set the executor specified to false', async () => {
-      await pumaPayPullPayment.removeExecutor(executorOne, {
-        from: owner
-      });
-      const executor = await pumaPayPullPayment.executors(executorOne);
-
-      assert.equal(executor, false);
-    });
-
-    it('should revert when the executor is a ZERO address', async () => {
-      await assertRevert(
-        pumaPayPullPayment.removeExecutor(ZERO_ADDRESS, {
-          from: owner
-        })
-      );
-    });
-
-    it('should revert when the executor does not exists', async () => {
-      await assertRevert(
-        pumaPayPullPayment.removeExecutor(executorTwo, {
-          from: owner
-        })
-      );
-    });
-
-    it('should revert if NOT executed by the owner', async () => {
-      await assertRevert(
-        pumaPayPullPayment.removeExecutor(executorTwo, {
-          from: executorOne
-        })
-      );
-    });
-  });
+  // describe('Remove executor', async () => {
+  //   beforeEach('Transfer ETH to smart contract', async () => {
+  //     await transferETH(1, deployerAccount, pumaPayPullPayment.address);
+  //   });
+  //
+  //   beforeEach('add an executor', async () => {
+  //     await pumaPayPullPayment.addExecutor(executorOne, {
+  //       from: owner
+  //     });
+  //   });
+  //
+  //   it('should set the executor specified to false', async () => {
+  //     await pumaPayPullPayment.removeExecutor(executorOne, {
+  //       from: owner
+  //     });
+  //     const executor = await pumaPayPullPayment.executors(executorOne);
+  //
+  //     assert.equal(executor, false);
+  //   });
+  //
+  //   it('should revert when the executor is a ZERO address', async () => {
+  //     await assertRevert(
+  //       pumaPayPullPayment.removeExecutor(ZERO_ADDRESS, {
+  //         from: owner
+  //       })
+  //     );
+  //   });
+  //
+  //   it('should revert when the executor does not exists', async () => {
+  //     await assertRevert(
+  //       pumaPayPullPayment.removeExecutor(executorTwo, {
+  //         from: owner
+  //       })
+  //     );
+  //   });
+  //
+  //   it('should revert if NOT executed by the owner', async () => {
+  //     await assertRevert(
+  //       pumaPayPullPayment.removeExecutor(executorTwo, {
+  //         from: executorOne
+  //       })
+  //     );
+  //   });
+  // });
 
   describe('Register Single Pull Payment', async () => {
     beforeEach('Transfer ETH to smart contract', async () => {
@@ -313,7 +318,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
@@ -322,7 +327,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         });
 
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(clientOne, singlePullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(singlePullPayment.paymentID);
 
       activePaymentInArray[ 0 ].should.be.equal(singlePullPayment.paymentType);
       activePaymentInArray[ 1 ].should.be.equal(singlePullPayment.currency);
@@ -338,6 +343,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3.utils.toBN(ethDate)));
       String(activePaymentInArray[ 11 ]).should.be.equal(String(0)); // cancel payment timestamp
       String(activePaymentInArray[ 12 ]).should.be.equal(singlePullPayment.treasuryAddress);
+      String(activePaymentInArray[ 13 ]).should.be.equal(singlePullPayment.pullPaymentExecutorAddress);
     });
 
     it('should execute the single pull payment', async () => {
@@ -349,14 +355,13 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
         {
           from: executorOne
         });
-
       const treasuryBalanceAfter = await token.balanceOf(treasuryAddress);
       const expectedAmountOfPmaTransferred =
         web3.utils.toWei(String(DECIMAL_FIXER * singlePullPayment.fiatAmountInCents / EUR_EXCHANGE_RATE / FIAT_TO_CENT_FIXER));
@@ -373,7 +378,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
@@ -391,7 +396,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
@@ -410,7 +415,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
@@ -423,7 +428,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
@@ -441,7 +446,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
@@ -468,7 +473,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ singlePullPayment.paymentID, singlePullPayment.businessID, singlePullPayment.uniqueReferenceID, singlePullPayment.paymentType ],
-        [ singlePullPayment.client, singlePullPayment.treasuryAddress ],
+        [ singlePullPayment.client, singlePullPayment.pullPaymentExecutorAddress, singlePullPayment.treasuryAddress ],
         [ singlePullPayment.initialConversionRate, singlePullPayment.fiatAmountInCents, singlePullPayment.initialPaymentAmountInCents ],
         [ singlePullPayment.frequency, singlePullPayment.numberOfPayments, singlePullPayment.startTimestamp, singlePullPayment.trialPeriod ],
         singlePullPayment.currency,
@@ -515,7 +520,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -524,7 +529,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         });
 
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(clientTwo, recurringPullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.paymentID);
 
       activePaymentInArray[ 0 ].should.be.equal(recurringPullPayment.paymentType);
       activePaymentInArray[ 1 ].should.be.equal(recurringPullPayment.currency);
@@ -540,6 +545,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // last payment timestamp
       String(activePaymentInArray[ 11 ]).should.be.equal(String(0)); // cancel payment timestamp
       String(activePaymentInArray[ 12 ]).should.be.equal(recurringPullPayment.treasuryAddress);
+      String(activePaymentInArray[ 13 ]).should.be.equal(recurringPullPayment.pullPaymentExecutorAddress);
     });
 
     it('should execute the first payment from the recurring pull payment', async () => {
@@ -551,7 +557,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -575,7 +581,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -612,7 +618,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -656,7 +662,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -674,7 +680,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -693,7 +699,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -720,7 +726,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -772,6 +778,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
           recurringWithInitialAmount.paymentType ],
         [
           recurringWithInitialAmount.client,
+          recurringWithInitialAmount.pullPaymentExecutorAddress,
           recurringWithInitialAmount.treasuryAddress
         ],
         [
@@ -791,7 +798,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         });
 
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringWithInitialAmount.client, recurringWithInitialAmount.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringWithInitialAmount.paymentID);
 
       activePaymentInArray[ 0 ].should.be.equal(recurringWithInitialAmount.paymentType);
       activePaymentInArray[ 1 ].should.be.equal(recurringWithInitialAmount.currency);
@@ -807,6 +814,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // last payment timestamp
       String(activePaymentInArray[ 11 ]).should.be.equal(String(0)); // cancel payment timestamp
       String(activePaymentInArray[ 12 ]).should.be.equal(recurringWithInitialAmount.treasuryAddress);
+      String(activePaymentInArray[ 13 ]).should.be.equal(recurringWithInitialAmount.pullPaymentExecutorAddress);
     });
 
     it('should execute the first payment from the recurring pull payment', async () => {
@@ -818,7 +826,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithInitialAmount.paymentID, recurringWithInitialAmount.businessID, recurringWithInitialAmount.uniqueReferenceID, recurringWithInitialAmount.paymentType ],
-        [ recurringWithInitialAmount.client, recurringWithInitialAmount.treasuryAddress ],
+        [ recurringWithInitialAmount.client, recurringWithInitialAmount.pullPaymentExecutorAddress, recurringWithInitialAmount.treasuryAddress ],
         [ recurringWithInitialAmount.initialConversionRate, recurringWithInitialAmount.fiatAmountInCents, recurringWithInitialAmount.initialPaymentAmountInCents ],
         [ recurringWithInitialAmount.frequency, recurringWithInitialAmount.numberOfPayments, recurringWithInitialAmount.startTimestamp, recurringWithInitialAmount.trialPeriod ],
         recurringWithInitialAmount.currency,
@@ -842,7 +850,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithInitialAmount.paymentID, recurringWithInitialAmount.businessID, recurringWithInitialAmount.uniqueReferenceID, recurringWithInitialAmount.paymentType ],
-        [ recurringWithInitialAmount.client, recurringWithInitialAmount.treasuryAddress ],
+        [ recurringWithInitialAmount.client, recurringWithInitialAmount.pullPaymentExecutorAddress, recurringWithInitialAmount.treasuryAddress ],
         [ recurringWithInitialAmount.initialConversionRate, recurringWithInitialAmount.fiatAmountInCents, recurringWithInitialAmount.initialPaymentAmountInCents ],
         [ recurringWithInitialAmount.frequency, recurringWithInitialAmount.numberOfPayments, recurringWithInitialAmount.startTimestamp, recurringWithInitialAmount.trialPeriod ],
         recurringWithInitialAmount.currency,
@@ -879,7 +887,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithInitialAmount.paymentID, recurringWithInitialAmount.businessID, recurringWithInitialAmount.uniqueReferenceID, recurringWithInitialAmount.paymentType ],
-        [ recurringWithInitialAmount.client, recurringWithInitialAmount.treasuryAddress ],
+        [ recurringWithInitialAmount.client, recurringWithInitialAmount.pullPaymentExecutorAddress, recurringWithInitialAmount.treasuryAddress ],
         [ recurringWithInitialAmount.initialConversionRate, recurringWithInitialAmount.fiatAmountInCents, recurringWithInitialAmount.initialPaymentAmountInCents ],
         [ recurringWithInitialAmount.frequency, recurringWithInitialAmount.numberOfPayments, recurringWithInitialAmount.startTimestamp, recurringWithInitialAmount.trialPeriod ],
         recurringWithInitialAmount.currency,
@@ -941,7 +949,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithInitialAmount.paymentID, recurringWithInitialAmount.businessID, recurringWithInitialAmount.uniqueReferenceID, recurringWithInitialAmount.paymentType ],
-        [ recurringWithInitialAmount.client, recurringWithInitialAmount.treasuryAddress ],
+        [ recurringWithInitialAmount.client, recurringWithInitialAmount.pullPaymentExecutorAddress, recurringWithInitialAmount.treasuryAddress ],
         [ recurringWithInitialAmount.initialConversionRate, recurringWithInitialAmount.fiatAmountInCents, recurringWithInitialAmount.initialPaymentAmountInCents ],
         [ recurringWithInitialAmount.frequency, recurringWithInitialAmount.numberOfPayments, recurringWithInitialAmount.startTimestamp, recurringWithInitialAmount.trialPeriod ],
         recurringWithInitialAmount.currency,
@@ -959,7 +967,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithInitialAmount.paymentID, recurringWithInitialAmount.businessID, recurringWithInitialAmount.uniqueReferenceID, recurringWithInitialAmount.paymentType ],
-        [ recurringWithInitialAmount.client, recurringWithInitialAmount.treasuryAddress ],
+        [ recurringWithInitialAmount.client, recurringWithInitialAmount.pullPaymentExecutorAddress, recurringWithInitialAmount.treasuryAddress ],
         [ recurringWithInitialAmount.initialConversionRate, recurringWithInitialAmount.fiatAmountInCents, recurringWithInitialAmount.initialPaymentAmountInCents ],
         [ recurringWithInitialAmount.frequency, recurringWithInitialAmount.numberOfPayments, recurringWithInitialAmount.startTimestamp, recurringWithInitialAmount.trialPeriod ],
         recurringWithInitialAmount.currency,
@@ -978,7 +986,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithInitialAmount.paymentID, recurringWithInitialAmount.businessID, recurringWithInitialAmount.uniqueReferenceID, recurringWithInitialAmount.paymentType ],
-        [ recurringWithInitialAmount.client, recurringWithInitialAmount.treasuryAddress ],
+        [ recurringWithInitialAmount.client, recurringWithInitialAmount.pullPaymentExecutorAddress, recurringWithInitialAmount.treasuryAddress ],
         [ recurringWithInitialAmount.initialConversionRate, recurringWithInitialAmount.fiatAmountInCents, recurringWithInitialAmount.initialPaymentAmountInCents ],
         [ recurringWithInitialAmount.frequency, recurringWithInitialAmount.numberOfPayments, recurringWithInitialAmount.startTimestamp, recurringWithInitialAmount.trialPeriod ],
         recurringWithInitialAmount.currency,
@@ -1005,7 +1013,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithInitialAmount.paymentID, recurringWithInitialAmount.businessID, recurringWithInitialAmount.uniqueReferenceID, recurringWithInitialAmount.paymentType ],
-        [ recurringWithInitialAmount.client, recurringWithInitialAmount.treasuryAddress ],
+        [ recurringWithInitialAmount.client, recurringWithInitialAmount.pullPaymentExecutorAddress, recurringWithInitialAmount.treasuryAddress ],
         [ recurringWithInitialAmount.initialConversionRate, recurringWithInitialAmount.fiatAmountInCents, recurringWithInitialAmount.initialPaymentAmountInCents ],
         [ recurringWithInitialAmount.frequency, recurringWithInitialAmount.numberOfPayments, recurringWithInitialAmount.startTimestamp, recurringWithInitialAmount.trialPeriod ],
         recurringWithInitialAmount.currency,
@@ -1057,6 +1065,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
           recurringWithFreeTrial.paymentType ],
         [
           recurringWithFreeTrial.client,
+          recurringWithFreeTrial.pullPaymentExecutorAddress,
           recurringWithFreeTrial.treasuryAddress
         ],
         [
@@ -1075,7 +1084,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
           from: executorTwo
         });
 
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringWithFreeTrial.client, recurringWithFreeTrial.paymentID,);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringWithFreeTrial.paymentID);
 
       activePaymentInArray[ 0 ].should.be.equal(recurringWithFreeTrial.paymentType);
       activePaymentInArray[ 1 ].should.be.equal(recurringWithFreeTrial.currency);
@@ -1091,6 +1100,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       String(activePaymentInArray[ 10 ]).should.be.equal(String(0)); // last payment timestamp
       String(activePaymentInArray[ 11 ]).should.be.equal(String(0)); // cancel payment timestamp
       String(activePaymentInArray[ 12 ]).should.be.equal(recurringWithFreeTrial.treasuryAddress);
+      String(activePaymentInArray[ 13 ]).should.be.equal(recurringWithFreeTrial.pullPaymentExecutorAddress);
     });
 
     it('should execute payments from the recurring pull payment after the free trial has passed', async () => {
@@ -1102,7 +1112,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithFreeTrial.paymentID, recurringWithFreeTrial.businessID, recurringWithFreeTrial.uniqueReferenceID, recurringWithFreeTrial.paymentType ],
-        [ recurringWithFreeTrial.client, recurringWithFreeTrial.treasuryAddress ],
+        [ recurringWithFreeTrial.client, recurringWithFreeTrial.pullPaymentExecutorAddress, recurringWithFreeTrial.treasuryAddress ],
         [ recurringWithFreeTrial.initialConversionRate, recurringWithFreeTrial.fiatAmountInCents, recurringWithFreeTrial.initialPaymentAmountInCents ],
         [ recurringWithFreeTrial.frequency, recurringWithFreeTrial.numberOfPayments, recurringWithFreeTrial.startTimestamp, recurringWithFreeTrial.trialPeriod ],
         recurringWithFreeTrial.currency,
@@ -1138,7 +1148,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithFreeTrial.paymentID, recurringWithFreeTrial.businessID, recurringWithFreeTrial.uniqueReferenceID, recurringWithFreeTrial.paymentType ],
-        [ recurringWithFreeTrial.client, recurringWithFreeTrial.treasuryAddress ],
+        [ recurringWithFreeTrial.client, recurringWithFreeTrial.pullPaymentExecutorAddress, recurringWithFreeTrial.treasuryAddress ],
         [ recurringWithFreeTrial.initialConversionRate, recurringWithFreeTrial.fiatAmountInCents, recurringWithFreeTrial.initialPaymentAmountInCents ],
         [ recurringWithFreeTrial.frequency, recurringWithFreeTrial.numberOfPayments, recurringWithFreeTrial.startTimestamp, recurringWithFreeTrial.trialPeriod ],
         recurringWithFreeTrial.currency,
@@ -1190,7 +1200,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithFreeTrial.paymentID, recurringWithFreeTrial.businessID, recurringWithFreeTrial.uniqueReferenceID, recurringWithFreeTrial.paymentType ],
-        [ recurringWithFreeTrial.client, recurringWithFreeTrial.treasuryAddress ],
+        [ recurringWithFreeTrial.client, recurringWithFreeTrial.pullPaymentExecutorAddress, recurringWithFreeTrial.treasuryAddress ],
         [ recurringWithFreeTrial.initialConversionRate, recurringWithFreeTrial.fiatAmountInCents, recurringWithFreeTrial.initialPaymentAmountInCents ],
         [ recurringWithFreeTrial.frequency, recurringWithFreeTrial.numberOfPayments, recurringWithFreeTrial.startTimestamp, recurringWithFreeTrial.trialPeriod ],
         recurringWithFreeTrial.currency,
@@ -1219,7 +1229,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithFreeTrial.paymentID, recurringWithFreeTrial.businessID, recurringWithFreeTrial.uniqueReferenceID, recurringWithFreeTrial.paymentType ],
-        [ recurringWithFreeTrial.client, recurringWithFreeTrial.treasuryAddress ],
+        [ recurringWithFreeTrial.client, recurringWithFreeTrial.pullPaymentExecutorAddress, recurringWithFreeTrial.treasuryAddress ],
         [ recurringWithFreeTrial.initialConversionRate, recurringWithFreeTrial.fiatAmountInCents, recurringWithFreeTrial.initialPaymentAmountInCents ],
         [ recurringWithFreeTrial.frequency, recurringWithFreeTrial.numberOfPayments, recurringWithFreeTrial.startTimestamp, recurringWithFreeTrial.trialPeriod ],
         recurringWithFreeTrial.currency,
@@ -1237,7 +1247,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithFreeTrial.paymentID, recurringWithFreeTrial.businessID, recurringWithFreeTrial.uniqueReferenceID, recurringWithFreeTrial.paymentType ],
-        [ recurringWithFreeTrial.client, recurringWithFreeTrial.treasuryAddress ],
+        [ recurringWithFreeTrial.client, recurringWithFreeTrial.pullPaymentExecutorAddress, recurringWithFreeTrial.treasuryAddress ],
         [ recurringWithFreeTrial.initialConversionRate, recurringWithFreeTrial.fiatAmountInCents, recurringWithFreeTrial.initialPaymentAmountInCents ],
         [ recurringWithFreeTrial.frequency, recurringWithFreeTrial.numberOfPayments, recurringWithFreeTrial.startTimestamp, recurringWithFreeTrial.trialPeriod ],
         recurringWithFreeTrial.currency,
@@ -1256,7 +1266,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithFreeTrial.paymentID, recurringWithFreeTrial.businessID, recurringWithFreeTrial.uniqueReferenceID, recurringWithFreeTrial.paymentType ],
-        [ recurringWithFreeTrial.client, recurringWithFreeTrial.treasuryAddress ],
+        [ recurringWithFreeTrial.client, recurringWithFreeTrial.pullPaymentExecutorAddress, recurringWithFreeTrial.treasuryAddress ],
         [ recurringWithFreeTrial.initialConversionRate, recurringWithFreeTrial.fiatAmountInCents, recurringWithFreeTrial.initialPaymentAmountInCents ],
         [ recurringWithFreeTrial.frequency, recurringWithFreeTrial.numberOfPayments, recurringWithFreeTrial.startTimestamp, recurringWithFreeTrial.trialPeriod ],
         recurringWithFreeTrial.currency,
@@ -1304,6 +1314,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
           recurringWithPaidTrial.paymentType ],
         [
           recurringWithPaidTrial.client,
+          recurringWithPaidTrial.pullPaymentExecutorAddress,
           recurringWithPaidTrial.treasuryAddress
         ],
         [
@@ -1323,7 +1334,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         });
 
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringWithPaidTrial.client, recurringWithPaidTrial.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringWithPaidTrial.paymentID);
 
       activePaymentInArray[ 0 ].should.be.equal(recurringWithPaidTrial.paymentType);
       activePaymentInArray[ 1 ].should.be.equal(recurringWithPaidTrial.currency);
@@ -1339,6 +1350,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // last payment timestamp
       String(activePaymentInArray[ 11 ]).should.be.equal(String(0)); // cancel payment timestamp
       String(activePaymentInArray[ 12 ]).should.be.equal(recurringWithPaidTrial.treasuryAddress);
+      String(activePaymentInArray[ 13 ]).should.be.equal(recurringWithPaidTrial.pullPaymentExecutorAddress);
     });
 
     it('should execute the initial payment for the paid trial', async () => {
@@ -1350,7 +1362,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithPaidTrial.paymentID, recurringWithPaidTrial.businessID, recurringWithPaidTrial.uniqueReferenceID, recurringWithPaidTrial.paymentType ],
-        [ recurringWithPaidTrial.client, recurringWithPaidTrial.treasuryAddress ],
+        [ recurringWithPaidTrial.client, recurringWithPaidTrial.pullPaymentExecutorAddress, recurringWithPaidTrial.treasuryAddress ],
         [ recurringWithPaidTrial.initialConversionRate, recurringWithPaidTrial.fiatAmountInCents, recurringWithPaidTrial.initialPaymentAmountInCents ],
         [ recurringWithPaidTrial.frequency, recurringWithPaidTrial.numberOfPayments, recurringWithPaidTrial.startTimestamp, recurringWithPaidTrial.trialPeriod ],
         recurringWithPaidTrial.currency,
@@ -1375,7 +1387,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithPaidTrial.paymentID, recurringWithPaidTrial.businessID, recurringWithPaidTrial.uniqueReferenceID, recurringWithPaidTrial.paymentType ],
-        [ recurringWithPaidTrial.client, recurringWithPaidTrial.treasuryAddress ],
+        [ recurringWithPaidTrial.client, recurringWithPaidTrial.pullPaymentExecutorAddress, recurringWithPaidTrial.treasuryAddress ],
         [ recurringWithPaidTrial.initialConversionRate, recurringWithPaidTrial.fiatAmountInCents, recurringWithPaidTrial.initialPaymentAmountInCents ],
         [ recurringWithPaidTrial.frequency, recurringWithPaidTrial.numberOfPayments, recurringWithPaidTrial.startTimestamp, recurringWithPaidTrial.trialPeriod ],
         recurringWithPaidTrial.currency,
@@ -1428,7 +1440,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithPaidTrial.paymentID, recurringWithPaidTrial.businessID, recurringWithPaidTrial.uniqueReferenceID, recurringWithPaidTrial.paymentType ],
-        [ recurringWithPaidTrial.client, recurringWithPaidTrial.treasuryAddress ],
+        [ recurringWithPaidTrial.client, recurringWithPaidTrial.pullPaymentExecutorAddress, recurringWithPaidTrial.treasuryAddress ],
         [ recurringWithPaidTrial.initialConversionRate, recurringWithPaidTrial.fiatAmountInCents, recurringWithPaidTrial.initialPaymentAmountInCents ],
         [ recurringWithPaidTrial.frequency, recurringWithPaidTrial.numberOfPayments, recurringWithPaidTrial.startTimestamp, recurringWithPaidTrial.trialPeriod ],
         recurringWithPaidTrial.currency,
@@ -1457,7 +1469,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithPaidTrial.paymentID, recurringWithPaidTrial.businessID, recurringWithPaidTrial.uniqueReferenceID, recurringWithPaidTrial.paymentType ],
-        [ recurringWithPaidTrial.client, recurringWithPaidTrial.treasuryAddress ],
+        [ recurringWithPaidTrial.client, recurringWithPaidTrial.pullPaymentExecutorAddress, recurringWithPaidTrial.treasuryAddress ],
         [ recurringWithPaidTrial.initialConversionRate, recurringWithPaidTrial.fiatAmountInCents, recurringWithPaidTrial.initialPaymentAmountInCents ],
         [ recurringWithPaidTrial.frequency, recurringWithPaidTrial.numberOfPayments, recurringWithPaidTrial.startTimestamp, recurringWithPaidTrial.trialPeriod ],
         recurringWithPaidTrial.currency,
@@ -1475,7 +1487,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithPaidTrial.paymentID, recurringWithPaidTrial.businessID, recurringWithPaidTrial.uniqueReferenceID, recurringWithPaidTrial.paymentType ],
-        [ recurringWithPaidTrial.client, recurringWithPaidTrial.treasuryAddress ],
+        [ recurringWithPaidTrial.client, recurringWithPaidTrial.pullPaymentExecutorAddress, recurringWithPaidTrial.treasuryAddress ],
         [ recurringWithPaidTrial.initialConversionRate, recurringWithPaidTrial.fiatAmountInCents, recurringWithPaidTrial.initialPaymentAmountInCents ],
         [ recurringWithPaidTrial.frequency, recurringWithPaidTrial.numberOfPayments, recurringWithPaidTrial.startTimestamp, recurringWithPaidTrial.trialPeriod ],
         recurringWithPaidTrial.currency,
@@ -1494,7 +1506,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithPaidTrial.paymentID, recurringWithPaidTrial.businessID, recurringWithPaidTrial.uniqueReferenceID, recurringWithPaidTrial.paymentType ],
-        [ recurringWithPaidTrial.client, recurringWithPaidTrial.treasuryAddress ],
+        [ recurringWithPaidTrial.client, recurringWithPaidTrial.pullPaymentExecutorAddress, recurringWithPaidTrial.treasuryAddress ],
         [ recurringWithPaidTrial.initialConversionRate, recurringWithPaidTrial.fiatAmountInCents, recurringWithPaidTrial.initialPaymentAmountInCents ],
         [ recurringWithPaidTrial.frequency, recurringWithPaidTrial.numberOfPayments, recurringWithPaidTrial.startTimestamp, recurringWithPaidTrial.trialPeriod ],
         recurringWithPaidTrial.currency,
@@ -1521,7 +1533,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringWithPaidTrial.paymentID, recurringWithPaidTrial.businessID, recurringWithPaidTrial.uniqueReferenceID, recurringWithPaidTrial.paymentType ],
-        [ recurringWithPaidTrial.client, recurringWithPaidTrial.treasuryAddress ],
+        [ recurringWithPaidTrial.client, recurringWithPaidTrial.pullPaymentExecutorAddress, recurringWithPaidTrial.treasuryAddress ],
         [ recurringWithPaidTrial.initialConversionRate, recurringWithPaidTrial.fiatAmountInCents, recurringWithPaidTrial.initialPaymentAmountInCents ],
         [ recurringWithPaidTrial.frequency, recurringWithPaidTrial.numberOfPayments, recurringWithPaidTrial.startTimestamp, recurringWithPaidTrial.trialPeriod ],
         recurringWithPaidTrial.currency,
@@ -1567,7 +1579,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency, {
@@ -1576,7 +1588,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     });
 
     it('should set the cancel date of the pull payment for the paymentExecutorOne to NOW', async () => {
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.deletePullPayment(
@@ -1584,17 +1596,18 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         recurringPullPayment.paymentID,
-        recurringPullPayment.client, {
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         });
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.client, recurringPullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.paymentID);
 
       String(activePaymentInArray[ 11 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // CANCEL PAYMENT TIMESTAMP
     });
 
     it('should revert when NOT executed by an executor', async () => {
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1602,13 +1615,14 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         recurringPullPayment.paymentID,
-        recurringPullPayment.client, {
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: owner
         }));
     });
 
     it('should revert when the payment for the beneficiary does not exists', async () => {
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1616,13 +1630,14 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         recurringPullPayment.paymentID,
-        recurringPullPayment.client, {
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         }));
     });
 
     it('should revert when the deletion pull payment params does match with the ones signed by the signatory', async () => {
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await assertRevert(pumaPayPullPayment.deletePullPayment(
@@ -1630,13 +1645,14 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         singlePullPayment.paymentID, // some other payment ID
-        recurringPullPayment.client, {
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         }));
     });
 
     it('should emit a "LogPaymentCancelled" event', async () => {
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const pumaPayPullPaymentDeletion = await pumaPayPullPayment.deletePullPayment(
@@ -1644,7 +1660,8 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         recurringPullPayment.paymentID,
-        recurringPullPayment.client, {
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         });
 
@@ -1682,7 +1699,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency, {
@@ -1723,7 +1740,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         }
       );
 
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(clientTwo, recurringPullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.paymentID);
 
       // Two executions has happened - one on registration and another one on the execution
       String(activePaymentInArray[ 9 ]).should.be
@@ -1743,7 +1760,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       );
 
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(clientTwo, recurringPullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.paymentID);
 
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // last payment timestamp
     });
@@ -1760,7 +1777,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         }
       );
 
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(clientTwo, recurringPullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.paymentID);
 
       // Two executions has happened - one on registration and another one on the execution
       String(activePaymentInArray[ 6 ]).should.be.equal(String(web3.utils.toBN(recurringPullPayment.numberOfPayments - 2)));
@@ -1828,14 +1845,15 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       await timeTravel(4 * recurringPullPayment.frequency + 1);
 
       // customer cancel the pull payment
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
       await pumaPayPullPayment.deletePullPayment(
         sigVRS.v,
         sigVRS.r,
         sigVRS.s,
         recurringPullPayment.paymentID,
-        recurringPullPayment.client, {
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         });
 
@@ -1883,7 +1901,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
     });
 
     it('should fail when pull payment was cancelled', async () => {
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       await pumaPayPullPayment.deletePullPayment(
@@ -1891,7 +1909,8 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         recurringPullPayment.paymentID,
-        recurringPullPayment.client,{
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         });
 
@@ -2051,7 +2070,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -2066,7 +2085,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.client, recurringPullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.paymentID);
 
       activePaymentInArray[ 0 ].should.be.equal(recurringPullPayment.paymentType);
       activePaymentInArray[ 1 ].should.be.equal(recurringPullPayment.currency);
@@ -2082,6 +2101,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       String(activePaymentInArray[ 10 ]).should.be.equal(String(web3.utils.toBN(ethDate)));
       String(activePaymentInArray[ 11 ]).should.be.equal(String(0)); // cancel payment timestamp
       String(activePaymentInArray[ 12 ]).should.be.equal(recurringPullPayment.treasuryAddress);
+      String(activePaymentInArray[ 13 ]).should.be.equal(recurringPullPayment.pullPaymentExecutorAddress);
     });
   });
 
@@ -2108,7 +2128,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -2133,7 +2153,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       });
 
       const executorBalanceBefore = await web3.eth.getBalance(executorOne);
-      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, CLIENT_TWO_PRIVATE_KEY);
+      const signature = await signDeletionV2_2(recurringPullPayment.paymentID, recurringPullPayment.pullPaymentExecutorAddress, CLIENT_TWO_PRIVATE_KEY);
       const sigVRS = await getVRS(signature);
 
       const transaction = await pumaPayPullPayment.deletePullPayment(
@@ -2141,7 +2161,8 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         recurringPullPayment.paymentID,
-        recurringPullPayment.client, {
+        recurringPullPayment.client,
+        recurringPullPayment.pullPaymentExecutorAddress, {
           from: executorOne
         });
 
@@ -2152,7 +2173,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
       assert.equal(web3.utils.fromWei(String(expectedBalance), 'ether'), web3.utils.fromWei(String(FUNDING_AMOUNT), 'ether'));
 
       const ethDate = await currentBlockTime();
-      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.client, recurringPullPayment.paymentID);
+      const activePaymentInArray = await pumaPayPullPayment.pullPayments(recurringPullPayment.paymentID);
 
       String(activePaymentInArray[ 11 ]).should.be.equal(String(web3.utils.toBN(ethDate))); // CANCEL PAYMENT TS
     });
@@ -2192,7 +2213,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
@@ -2231,7 +2252,7 @@ contract('PumaPay Pull Payment V2.2 Contract', async (accounts) => {
         sigVRS.r,
         sigVRS.s,
         [ recurringPullPayment.paymentID, recurringPullPayment.businessID, recurringPullPayment.uniqueReferenceID, recurringPullPayment.paymentType ],
-        [ recurringPullPayment.client, recurringPullPayment.treasuryAddress ],
+        [ recurringPullPayment.client, recurringPullPayment.pullPaymentExecutorAddress, recurringPullPayment.treasuryAddress ],
         [ recurringPullPayment.initialConversionRate, recurringPullPayment.fiatAmountInCents, recurringPullPayment.initialPaymentAmountInCents ],
         [ recurringPullPayment.frequency, recurringPullPayment.numberOfPayments, recurringPullPayment.startTimestamp, recurringPullPayment.trialPeriod ],
         recurringPullPayment.currency,
