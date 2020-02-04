@@ -10,7 +10,7 @@ SOLIDITY_COVERAGE=$1
 
 cleanup() {
   # Kill the ganache instance that we started (if we started one and if it's still running).
-  if [ -n "$ganache_pid" ] && ps -p $ganache_pid > /dev/null; then
+  if [ -n "$ganache_pid" ] && ps -p $ganache_pid >/dev/null; then
     kill -9 $ganache_pid
   fi
 }
@@ -32,9 +32,9 @@ start_ganache() {
   local gasLimit=0xfffffffffff
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    npx testrpc-sc --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
+    npx testrpc-sc --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 >/dev/null &
   else
-    npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 > /dev/null &
+    npx ganache-cli --port "$ganache_port" -m "$mnemonic" -e "$balance" -g "$gasPrice" -l "$gasLimit" -a 20 >/dev/null &
   fi
 
   ganache_pid=$!
